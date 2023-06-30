@@ -294,7 +294,7 @@ protected:
 		TWheel.init(this, "textures/SlotWheel.png");
 		TKey.init(this, "textures/PressSpace.png");
 		TSplash.init(this, "textures/SplashScreen.png");
-		TTank.init(this, "textures/Yellow.png");
+		TTank.init(this, "textures/Red.png");
 
 		// Init local variables
 		CamH = 1.0f;
