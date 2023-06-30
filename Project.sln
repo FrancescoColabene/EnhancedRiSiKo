@@ -9,6 +9,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		DesktopBuddy|x64 = DesktopBuddy|x64
+		DesktopBuddy|x86 = DesktopBuddy|x86
 		PortatileBuddy|x64 = PortatileBuddy|x64
 		PortatileBuddy|x86 = PortatileBuddy|x86
 		Release|x64 = Release|x64
@@ -19,6 +21,10 @@ Global
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Debug|x64.Build.0 = Debug|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Debug|x86.ActiveCfg = Debug|Win32
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Debug|x86.Build.0 = Debug|Win32
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.DesktopBuddy|x64.ActiveCfg = DesktopBuddy|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.DesktopBuddy|x64.Build.0 = DesktopBuddy|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.DesktopBuddy|x86.ActiveCfg = DesktopBuddy|Win32
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.DesktopBuddy|x86.Build.0 = DesktopBuddy|Win32
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x64.ActiveCfg = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x64.Build.0 = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.ActiveCfg = PortatileBuddy|Win32
