@@ -27,8 +27,8 @@ Global
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.DesktopBuddy|x86.Build.0 = DesktopBuddy|Win32
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x64.ActiveCfg = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x64.Build.0 = PortatileBuddy|x64
-		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.ActiveCfg = PortatileBuddy|Win32
-		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.Build.0 = PortatileBuddy|Win32
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.ActiveCfg = PortatileBuddy|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.Build.0 = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x64.ActiveCfg = Release|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x64.Build.0 = Release|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x86.ActiveCfg = Release|Win32
