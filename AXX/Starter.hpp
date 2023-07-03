@@ -1833,7 +1833,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 			m.y = -1.0f;
 		}
 		
-		fire = glfwGetKey(window, GLFW_KEY_SPACE) | glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+		fire = glfwGetKey(window, GLFW_KEY_C) | glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 		handleGamePad(GLFW_JOYSTICK_1,m,r,fire);
 		handleGamePad(GLFW_JOYSTICK_2,m,r,fire);
 		handleGamePad(GLFW_JOYSTICK_3,m,r,fire);
