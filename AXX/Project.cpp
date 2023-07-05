@@ -351,8 +351,8 @@ protected:
 		// binds the descriptor set layout
 		DSFloor.bind(commandBuffer, PVertexPlain, 1, currentImage);
 		// record the drawing command in the command buffer
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
+		/*vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);*/
 		
 
 

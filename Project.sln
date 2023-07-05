@@ -13,6 +13,8 @@ Global
 		DesktopBuddy|x86 = DesktopBuddy|x86
 		PortatileBuddy|x64 = PortatileBuddy|x64
 		PortatileBuddy|x86 = PortatileBuddy|x86
+		PortatileStrufi|x64 = PortatileStrufi|x64
+		PortatileStrufi|x86 = PortatileStrufi|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
@@ -29,6 +31,10 @@ Global
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x64.Build.0 = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.ActiveCfg = PortatileBuddy|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileBuddy|x86.Build.0 = PortatileBuddy|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileStrufi|x64.ActiveCfg = PortatileStrufi|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileStrufi|x64.Build.0 = PortatileStrufi|x64
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileStrufi|x86.ActiveCfg = PortatileStrufi|Win32
+		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.PortatileStrufi|x86.Build.0 = PortatileStrufi|Win32
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x64.ActiveCfg = Release|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x64.Build.0 = Release|x64
 		{9D5DCB20-1CD3-42AE-820D-09E1631ECD78}.Release|x86.ActiveCfg = Release|Win32
