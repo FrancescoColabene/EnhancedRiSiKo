@@ -31,6 +31,14 @@ struct GlobalUniformBlock {
 	alignas(16) glm::vec3 eyePos;
 };
 
+// Gamestate enum structure - it starts from 0
+enum GameState {
+	WALK,
+	TANK, 
+	CAR,
+	HELI
+};
+
 // The vertices data structures
 struct VertexMesh {
 	glm::vec3 pos;
@@ -43,7 +51,7 @@ struct VertexPlain {
 	glm::vec2 UV;
 };
 
-/* A16 */
+/* FinalProject */
 /* Add the C++ datastructure for the required vertex format */
 struct VertexMonoColor {
 	glm::vec3 pos;
@@ -52,7 +60,7 @@ struct VertexMonoColor {
 };
 
 // MAIN ! 
-class A16 : public BaseProject {
+class FinalProject : public BaseProject {
 protected:
 
 	// Current aspect ratio (used by the callback that resized the window)
@@ -60,33 +68,33 @@ protected:
 
 	// Descriptor Layouts ["classes" of what will be passed to the shaders]
 	DescriptorSetLayout DSLGubo;
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the required Descriptor Set Layout */
 	DescriptorSetLayout DSLMonoColor;
 	DescriptorSetLayout DSLVertexPlain;
 
 	// Vertex formats
 
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the required Vertex format definition */
 	VertexDescriptor VMonoColor;
 	VertexDescriptor VVertexPlain;
 
 	// Pipelines [Shader couples]
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the new pipeline */
 	Pipeline PMonoColor;
 	Pipeline PVertexPlain;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	// Please note that Model objects depends on the corresponding vertex structure
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the model for the room */
 	Model<VertexMonoColor> MTank;
 	Model<VertexPlain> MFloor;
 
 	DescriptorSet DSGubo;
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
 	DescriptorSet DSTank;
 	DescriptorSet DSFloor;
@@ -95,20 +103,60 @@ protected:
 	Texture TFloor;
 
 	// C++ storage for uniform variables
-	/* A16 */
+	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank;
 	PlainUniformBlock uboFloor;
 
 	GlobalUniformBlock gubo;
 
+	// ------------------------------------------------------------------------------------
+
 	// Other application parameters
-	float CamH, CamRadius, CamPitch, CamYaw;
-	int gameState;
-	float HandleRot = 0.0;
-	float Wheel1Rot = 0.0;
-	float Wheel2Rot = 0.0;
-	float Wheel3Rot = 0.0;
+	GameState gameState = GameState::WALK;
+
+
+	// guardando A16 e A07 non sto capendo dove andrebbero messe queste variabili - qui o dove c'è la logica effettiva
+
+	// si potrebbe togliere il const e permettere di cambiare fov al player quando si trova in prima persona - magari con un'altra enum
+	const float FOVy = glm::radians(60.0f);
+	const float nearPlane = 0.1f;
+	const float farPlane = 40.f;
+
+	// Player starting point
+	const glm::vec3 StartingPosition = glm::vec3(10.0f, 0.0f, 10.0f);
+
+	// si potrebbe usare una sola variabile e cambiarla dentro allo switch, not sure
+	// Camera target height and distance for the tank view
+	const float tankCamHeight = 2.5f;
+	const float tankCamDist = 9.0f;
+	// Camera target height and distance for the tank view
+	const float carCamHeight = 2.5f;
+	const float carCamDist = 9.0f;
+	// Camera target height and distance for the tank view
+	const float heliCamHeight = 2.5f;
+	const float heliCamDist = 9.0f;
+	// Camera Pitch limits - valid for every view 
+	const float minPitch = glm::radians(-8.75f);
+	const float maxPitch = glm::radians(60.0f);
+	// Rotation and motion speed - ancora da definire per bene
+	const float ROT_SPEED = glm::radians(120.0f);
+	const float MOVE_SPEED = 2.0f;
+
+	// Parameters needed in the damping implementation - 3rd person view
+	const float LAMBDAROT = 20.0f,
+				LAMBDAMOV = 10.0f,
+				DEADZONE = 0.2f;
+	
+	// queste molto probabilmente andrebbero messe sotto
+	// Angles and variables needed to implement damping - independet player rotation from the camera
+	float yaw = 0.0f,		pitch = 0.0f,		roll = 0.0f,  // il rott sarebbe da togliere
+		  yawOld = 0.0f,	pitchOld = 0.0f,
+		  yawNew = 0.0f,	pitchNew = 0.0f,
+		  playerYaw = 0.0f, playerYawOld = 0.0;
+
+
+	// ------------------------------------------------------------------------------------
 
 
 	// Here you set the main application parameters
@@ -121,7 +169,7 @@ protected:
 		initialBackgroundColor = { 0.0f, 0.005f, 0.01f, 1.0f };
 
 		// Descriptor pool sizes
-		/* A16 */
+		/* FinalProject */
 		/* Update the requirements for the size of the pool */
 		uniformBlocksInPool = 3; // prima era 9
 		texturesInPool = 2;
@@ -138,7 +186,7 @@ protected:
 	// Here you load and setup all your Vulkan Models and Texutures.
 	// Here you also create your Descriptor set layouts and load the shaders for the pipelines
 	void localInit() {
-		/* A16 */
+		/* FinalProject */
 		/* Init the new Data Set Layout */
 		DSLVertexPlain.init(this, {
 					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
@@ -156,7 +204,7 @@ protected:
 
 		// Vertex descriptors
 
-		/* A16 */
+		/* FinalProject */
 		/* Define the new Vertex Format */
 		VMonoColor.init(this, { 
 			// this array contains the bindings
@@ -208,7 +256,7 @@ protected:
 		// Third and fourth parameters are respectively the vertex and fragment shaders
 		// The last array, is a vector of pointer to the layouts of the sets that will
 		// be used in this pipeline. The first element will be set 0, and so on..
-		/* A16 */
+		/* FinalProject */
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
 		PMonoColor.init(this, &VMonoColor, "shaders/Tank/MonoColorVert.spv", "shaders/Tank/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
 		PVertexPlain.init(this, &VVertexPlain, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLGubo, &DSLVertexPlain });
@@ -220,7 +268,7 @@ protected:
 		// The second parameter is the pointer to the vertex definition for this model
 		// The third parameter is the file name
 		// The last is a constant specifying the file type: currently only OBJ or GLTF
-		/* A16 */
+		/* FinalProject */
 		/* load the mesh for the room, contained in OBJ file "Room.obj" */
 		MTank.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
 		MFloor.vertices = 
@@ -240,24 +288,20 @@ protected:
 		TFloor.init(this, "textures/RisikoMap.png");
 
 		// Init local variables
-		// TODO UPDATE THOSE VARIABLES WITH THE STUFF IN GAME LOGIC
-		CamH = 1.0f;
-		CamRadius = 3.0f;
-		CamPitch = glm::radians(15.f);
-		CamYaw = glm::radians(30.f);
-		gameState = 0;
+		// TODO ci sarebbe da inizializzare variabili, ma non mi convince molto
+		gameState = GameState::WALK;
 	}
 
 	// Here you create your pipelines and Descriptor Sets!
 	void pipelinesAndDescriptorSetsInit() {
 		// This creates a new pipeline (with the current surface), using its shaders
-		/* A16 */
+		/* FinalProject */
 		/* Create the new pipeline */
 		PMonoColor.create();
 		PVertexPlain.create();
 		// Here you define the data set
 
-		/* A16 */
+		/* FinalProject */
 		/* Define the data set for the room */
 		DSTank.init(this, &DSLMonoColor, {
 			// the second parameter, is a pointer to the Uniform Set Layout of this set
@@ -284,12 +328,12 @@ protected:
 	// All the object classes defined in Starter.hpp have a method .cleanup() for this purpose
 	void pipelinesAndDescriptorSetsCleanup() {
 		// Cleanup pipelines
-		/* A16 */
+		/* FinalProject */
 		/* cleanup the new pipeline */
 		PMonoColor.cleanup();
 		PVertexPlain.cleanup();
 		// Cleanup datasets
-		/* A16 */
+		/* FinalProject */
 		/* cleanup the dataset for the room */
 		DSTank.cleanup();
 		DSFloor.cleanup();
@@ -306,17 +350,17 @@ protected:
 		TFloor.cleanup();
 
 		// Cleanup models
-		/* A16 */
+		/* FinalProject */
 		/* Cleanup the mesh for the room */
 		MTank.cleanup();
 		// Cleanup descriptor set layouts
-		/* A16 */
+		/* FinalProject */
 		/* Cleanup the new Descriptor Set Layout */
 		DSLMonoColor.cleanup();
 		DSLVertexPlain.cleanup();
 		DSLGubo.cleanup();
 
-		/* A16 */
+		/* FinalProject */
 		/* Destroy the new pipeline */
 		PMonoColor.destroy();
 		PVertexPlain.destroy();
@@ -327,7 +371,7 @@ protected:
 	// with their buffers and textures
 
 	void populateCommandBuffer(VkCommandBuffer commandBuffer, int currentImage) {
-		/* A16 */
+		/* FinalProject */
 		/* Insert the commands to draw the room */
 
 		// binds the pipeline
@@ -366,12 +410,53 @@ protected:
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 
+		
+		glm::vec3 camPos;
+		glm::mat4 ViewPrj;
+		glm::mat4 World;
+
+		Logic(Ar, ViewPrj, World, camPos);
+
+
+
+
+		// gubo values
+		gubo.DlightDir = glm::normalize(glm::vec3(1, 2, 3));
+		gubo.DlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		gubo.AmbLightColor = glm::vec3(0.1f);
+		gubo.eyePos = camPos;
+
+		// Writes value to the GPU
+		DSGubo.map(currentImage, &gubo, sizeof(gubo), 0);
+		// the .map() method of a DataSet object, requires the current image of the swap chain as first parameter
+		// the second parameter is the pointer to the C++ data structure to transfer to the GPU
+		// the third parameter is its size
+		// the fourth parameter is the location inside the descriptor set of this uniform block
+
+		
+		/* FinalProject */
+		/* fill the uniform block for the room. Identical to the one of the body of the slot machine */
+		// THE TANK IS THE PLAYER RN, BCS I USE THE WORLD AND VIEWPROJ MATRIX CALCULATED FOR THE PLAYER FOR ITS COORDINATES.
+		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; uboTank.sColor = glm::vec3(1.0f);
+		uboTank.mvpMat = ViewPrj * World;
+		uboTank.mMat = World;
+		uboTank.nMat = glm::inverse(glm::transpose(World));
+		/* map the uniform data block to the GPU */
+		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
+
+		uboFloor.visible = 1;
+		DSFloor.map(currentImage, &uboFloor, sizeof(uboFloor), 0);
+
+	}
+
+	void Logic(float Ar, glm::mat4 &ViewPrj, glm::mat4 &World, glm::vec3 &camPos) {
+
 		// Integration with the timers and the controllers
-		// returns:
-		// <float deltaT> the time passed since the last frame
-		// <glm::vec3 m> the state of the motion axes of the controllers (-1 <= m.x, m.y, m.z <= 1)
-		// <glm::vec3 r> the state of the rotation axes of the controllers (-1 <= r.x, r.y, r.z <= 1)
-		// <bool fire> if the user has pressed a fire button (not required in this assignment)
+			// returns:
+			// <float deltaT> the time passed since the last frame
+			// <glm::vec3 m> the state of the motion axes of the controllers (-1 <= m.x, m.y, m.z <= 1)
+			// <glm::vec3 r> the state of the rotation axes of the controllers (-1 <= r.x, r.y, r.z <= 1)
+			// <bool fire> if the user has pressed a fire button (not required in this assignment)
 		float deltaT;
 		glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
 		bool fire = false;
@@ -386,14 +471,18 @@ protected:
 		// If fills the last boolean variable with true if fire has been pressed:
 		//          SPACE on the keyboard, A or B button on the Gamepad, Right mouse button
 
-		// LOGIC OF THE APPLICATION
-		//TODO implement first person view
+		// PARAMETER INITIALIZATION 
 		const float FOVy = glm::radians(45.0f);
 		const float nearPlane = 0.1f;
 		const float farPlane = 100.f;
 
-		// Player starting point
-		const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 0.0);
+		// Player position vectors - static variables make sure that their value remain unchanged in subsequent calls to the procedure
+		const glm::vec3 StartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+		static glm::vec3 playerPosition = StartingPosition, 
+						 oldPos = StartingPosition, 
+						 newPos = StartingPosition, 
+						 newPos2 = StartingPosition;
+
 
 		// Camera target height and distance
 		const float camHeight = 2.5f;
@@ -406,9 +495,7 @@ protected:
 		const float MOVE_SPEED = 2.0f;
 
 
-		// Game Logic implementation
-		// Current Player Position - static variables make sure that their value remain unchanged in subsequent calls to the procedure
-		static glm::vec3 playerPosition = StartingPosition, oldPos = StartingPosition, newPos = StartingPosition, newPos2 = StartingPosition;
+		
 
 		// To be done in the assignment
 		glm::mat4 ViewMatrix, ProjectionMatrix, WorldMatrix;
@@ -423,6 +510,30 @@ protected:
 			yawOld = 0.0f, pitchOld = 0.0f,
 			yawNew = 0.0f, pitchNew = 0.0f,
 			playerYaw = 0.0f, playerYawOld = 0.0;
+
+
+		// LOGIC OF THE APPLICATION
+		//TODO implement first person view
+
+		switch (gameState)
+		{
+		case WALK:
+
+			break;
+		case TANK:
+
+			break;
+		case CAR:
+
+			break;
+		case HELI:
+
+			break;
+		default:
+			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
+			break;
+		}
+
 
 		// computing angles
 		pitch -= ROT_SPEED * r.x * deltaT;
@@ -482,7 +593,7 @@ protected:
 			glm::translate(glm::mat4(1), playerPosition) *
 			glm::mat4(glm::quat(glm::vec3(0, playerYaw, 0))) *
 			glm::scale(glm::mat4(1), glm::vec3(1));
-		glm::mat4 World = WorldMatrix;
+		World = WorldMatrix;
 
 		// World Matrix used for the camera
 		WorldMatrix = glm::translate(glm::mat4(1), oldPos) *
@@ -493,6 +604,7 @@ protected:
 		glm::vec3 cameraPosition;
 		glm::vec4 temp = WorldMatrix * glm::vec4(0, camHeight + (camDist * sin(pitchNew)), camDist * cos(pitchNew), 1);
 		cameraPosition = glm::vec3(temp.x, temp.y, temp.z);
+		camPos = cameraPosition;
 
 		glm::vec3 targetPointedPosition;
 		targetPointedPosition = glm::vec3(newPos.x, newPos.y + camHeight, newPos.z);
@@ -503,64 +615,45 @@ protected:
 		ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
 		ProjectionMatrix[1][1] *= -1;
 
-		glm::mat4 ViewPrj = ProjectionMatrix * ViewMatrix;
-		
-
-		// Parameters
-		// Camera FOV-y, Near Plane and Far Plane
-		//const float FOVy = glm::radians(90.0f);
-		//const float nearPlane = 0.1f;
-		//const float farPlane = 100.0f;
-		const float rotSpeed = glm::radians(90.0f);
-		const float movSpeed = 1.0f;
-
-		CamH += m.z * movSpeed * deltaT;
-		CamRadius -= m.x * movSpeed * deltaT;
-		CamPitch -= r.x * rotSpeed * deltaT;
-		CamYaw += r.y * rotSpeed * deltaT;
-
-		glm::mat4 Prj = glm::perspective(FOVy, Ar, nearPlane, farPlane);
-		Prj[1][1] *= -1;
-		glm::vec3 camTarget = glm::vec3(0, CamH, 0);
-		glm::vec3 camPos = camTarget +
-			CamRadius * glm::vec3(cos(CamPitch) * sin(CamYaw),
-				sin(CamPitch),
-				cos(CamPitch) * cos(CamYaw));
-		glm::mat4 View = glm::lookAt(camPos, camTarget, glm::vec3(0, 1, 0));
-
-		gubo.DlightDir = glm::normalize(glm::vec3(1, 2, 3));
-		gubo.DlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		gubo.AmbLightColor = glm::vec3(0.1f);
-		gubo.eyePos = camPos;
-
-		// Writes value to the GPU
-		DSGubo.map(currentImage, &gubo, sizeof(gubo), 0);
-		// the .map() method of a DataSet object, requires the current image of the swap chain as first parameter
-		// the second parameter is the pointer to the C++ data structure to transfer to the GPU
-		// the third parameter is its size
-		// the fourth parameter is the location inside the descriptor set of this uniform block
-
-		
-		/* A16 */
-		/* fill the uniform block for the room. Identical to the one of the body of the slot machine */
-		// THE TANK IS THE PLAYER RN, BCS I USE THE WORLD AND VIEWPROJ MATRIX CALCULATED FOR THE PLAYER FOR ITS COORDINATES.
-		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; uboTank.sColor = glm::vec3(1.0f);
-		uboTank.mvpMat = ViewPrj * World;
-		uboTank.mMat = World;
-		uboTank.nMat = glm::inverse(glm::transpose(World));
-		/* map the uniform data block to the GPU */
-		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
-
-		uboFloor.visible = 1;
-		DSFloor.map(currentImage, &uboFloor, sizeof(uboFloor), 0);
+		ViewPrj = ProjectionMatrix * ViewMatrix;
 
 	}
+
+	glm::mat4 MakeViewProjectionMatrix(float Ar, float Alpha, float Beta, float Rho, glm::vec3 Pos) {
+		// Creates a view projection matrix, with near plane at 0.1, and far plane at 50.0, and
+		// aspect ratio given in <Ar>. The view matrix, uses the Look-in-Direction model, with
+		// vector <pos> specifying the position of the camera, and angles <Alpha>, <Beta> and <Rho>
+		// defining its direction. In particular, <Alpha> defines the direction (Yaw), <Beta> the
+		// elevation (Pitch), and <Rho> the roll.
+
+		glm::mat4 ViewMatrix, ProjectionMatrix, ViewProjectionMatrix;
+
+		float angle, n = 0.1f, f = 40.0f;
+		angle = glm::radians(90.0f);
+		ProjectionMatrix = glm::perspective(angle, Ar, n, f);
+		ProjectionMatrix[1][1] *= -1;
+
+		ViewMatrix =
+			glm::rotate(glm::mat4(1), -Rho, glm::vec3(0, 0, 1)) *
+			glm::rotate(glm::mat4(1), -Beta, glm::vec3(1, 0, 0)) *
+			glm::rotate(glm::mat4(1), -Alpha, glm::vec3(0, 1, 0)) *
+			glm::translate(glm::mat4(1), glm::vec3(-Pos.x, -Pos.y, -Pos.z));
+
+		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+
+		return ViewProjectionMatrix;
+	}
+
+
+
 };
+
+
 
 
 // This is the main: probably you do not need to touch this!
 int main() {
-	A16 app;
+	FinalProject app;
 
 	try {
 		app.run();
