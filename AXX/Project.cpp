@@ -123,8 +123,12 @@ protected:
 	const float nearPlane = 0.1f;
 	const float farPlane = 40.f;
 
-	// Player starting point
+	// Player starting point + initialization
 	const glm::vec3 StartingPosition = glm::vec3(10.0f, 0.0f, 10.0f);
+	glm::vec3 playerPosition = StartingPosition,
+			  oldPos = StartingPosition,
+			  newPos = StartingPosition,
+			  newPos2 = StartingPosition;
 
 	// si potrebbe usare una sola variabile e cambiarla dentro allo switch, not sure
 	// Camera target height and distance for the tank view
@@ -415,6 +419,7 @@ protected:
 		glm::mat4 ViewPrj;
 		glm::mat4 World;
 
+		// Function that contains all the logic of the game
 		Logic(Ar, ViewPrj, World, camPos);
 
 
@@ -471,45 +476,12 @@ protected:
 		// If fills the last boolean variable with true if fire has been pressed:
 		//          SPACE on the keyboard, A or B button on the Gamepad, Right mouse button
 
-		// PARAMETER INITIALIZATION 
-		const float FOVy = glm::radians(45.0f);
-		const float nearPlane = 0.1f;
-		const float farPlane = 100.f;
 
-		// Player position vectors - static variables make sure that their value remain unchanged in subsequent calls to the procedure
-		const glm::vec3 StartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-		static glm::vec3 playerPosition = StartingPosition, 
-						 oldPos = StartingPosition, 
-						 newPos = StartingPosition, 
-						 newPos2 = StartingPosition;
-
-
-		// Camera target height and distance
-		const float camHeight = 2.5f;
-		const float camDist = 9.0f;
-		// Camera Pitch limits
-		const float minPitch = glm::radians(-8.75f);
-		const float maxPitch = glm::radians(60.0f);
-		// Rotation and motion speed
-		const float ROT_SPEED = glm::radians(120.0f);
-		const float MOVE_SPEED = 2.0f;
-
-
-		
-
-		// To be done in the assignment
+		// placeholder variables for matrices
 		glm::mat4 ViewMatrix, ProjectionMatrix, WorldMatrix;
 
-		const float LAMBDAROT = 20.0f,
-			LAMBDAMOV = 10.0f,
-			DEADZONE = 0.2f;
 
 		static bool updatePos = false;
-
-		static float yaw = 0.0f, pitch = 0.0f, roll = 0.0f,
-			yawOld = 0.0f, pitchOld = 0.0f,
-			yawNew = 0.0f, pitchNew = 0.0f,
-			playerYaw = 0.0f, playerYawOld = 0.0;
 
 
 		// LOGIC OF THE APPLICATION
@@ -534,6 +506,8 @@ protected:
 			break;
 		}
 
+
+		// THIS IS THE THIRD PERSON IMPLEMENTATION - WILL USE IT FOR THE TANK/CAR/HELI WITH TWEAKS FOR THE MOVEMENT OPTIONS
 
 		// computing angles
 		pitch -= ROT_SPEED * r.x * deltaT;
@@ -602,12 +576,12 @@ protected:
 
 		// calculating the View-Projection Matrix
 		glm::vec3 cameraPosition;
-		glm::vec4 temp = WorldMatrix * glm::vec4(0, camHeight + (camDist * sin(pitchNew)), camDist * cos(pitchNew), 1);
+		glm::vec4 temp = WorldMatrix * glm::vec4(0, tankCamHeight + (tankCamDist * sin(pitchNew)), tankCamDist * cos(pitchNew), 1);
 		cameraPosition = glm::vec3(temp.x, temp.y, temp.z);
 		camPos = cameraPosition;
 
 		glm::vec3 targetPointedPosition;
-		targetPointedPosition = glm::vec3(newPos.x, newPos.y + camHeight, newPos.z);
+		targetPointedPosition = glm::vec3(newPos.x, newPos.y + tankCamHeight, newPos.z);
 
 		ViewMatrix = glm::lookAt(cameraPosition, targetPointedPosition, glm::vec3(0, 1, 0));
 		ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
@@ -643,8 +617,6 @@ protected:
 
 		return ViewProjectionMatrix;
 	}
-
-
 
 };
 
