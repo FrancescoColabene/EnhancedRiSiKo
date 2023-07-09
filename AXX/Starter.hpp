@@ -1794,12 +1794,23 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		double m_dy = ypos - old_ypos;
 		old_xpos = xpos; old_ypos = ypos;
 
-		const float MOUSE_RES = 10.0f;
+		const float MOUSE_RES = 1.0f;
+		// settare lo sticky a true significa che non perdo input se premo e lascio il tasto prima che venga controllato il suo stato
 		glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+		// Disabilita la visione del mouse e permette lo scrolling infinito per la visuale
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		
+		
+		r.y = m_dx / MOUSE_RES;
+		r.x = m_dy / MOUSE_RES;
+		
+		/*
+		* Funzione per fare qualcosa alla pressione del tasto sinistro del mouse
+		
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-			r.y = -m_dx / MOUSE_RES;
-			r.x = -m_dy / MOUSE_RES;
 		}
+		*/
+
 
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 			r.y = -1.0f;
