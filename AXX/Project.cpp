@@ -31,6 +31,21 @@ struct GlobalUniformBlock {
 	alignas(16) glm::vec3 eyePos;
 };
 
+// The uniform buffer object copied from A07
+struct UniformBufferObject {
+	alignas(16) glm::mat4 mvpMat;
+	alignas(16) glm::mat4 mMat;
+	alignas(16) glm::mat4 nMat;
+};
+
+struct GlobalUniformBufferObject {
+	alignas(16) glm::vec3 lightDir;
+	alignas(16) glm::vec4 lightColor;
+	alignas(16) glm::vec3 eyePos;
+};
+
+
+
 // Gamestate enum structure - it starts from 0
 enum GameState {
 	WALK,
@@ -43,11 +58,6 @@ enum GameState {
 struct VertexMesh {
 	glm::vec3 pos;
 	glm::vec3 norm;
-	glm::vec2 UV;
-};
-
-struct VertexPlain {
-	glm::vec3 pos;
 	glm::vec2 UV;
 };
 
@@ -71,27 +81,27 @@ protected:
 	/* FinalProject */
 	/* Add the variable that will contain the required Descriptor Set Layout */
 	DescriptorSetLayout DSLMonoColor;
-	DescriptorSetLayout DSLVertexPlain;
+	DescriptorSetLayout DSLVertexFloor;
 
 	// Vertex formats
 
 	/* FinalProject */
 	/* Add the variable that will contain the required Vertex format definition */
 	VertexDescriptor VMonoColor;
-	VertexDescriptor VVertexPlain;
+	VertexDescriptor VVertexFloor;
 
 	// Pipelines [Shader couples]
 	/* FinalProject */
 	/* Add the variable that will contain the new pipeline */
 	Pipeline PMonoColor;
-	Pipeline PVertexPlain;
+	Pipeline PVertexFloor;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	// Please note that Model objects depends on the corresponding vertex structure
 	/* FinalProject */
 	/* Add the variable that will contain the model for the room */
 	Model<VertexMonoColor> MTank;
-	Model<VertexPlain> MFloor;
+	Model<VertexMonoColor> MFloor;
 
 	DescriptorSet DSGubo;
 	/* FinalProject */
@@ -106,7 +116,7 @@ protected:
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank;
-	PlainUniformBlock uboFloor;
+	UniformBufferObject uboFloor;
 
 	GlobalUniformBlock gubo;
 
@@ -119,12 +129,12 @@ protected:
 	// guardando A16 e A07 non sto capendo dove andrebbero messe queste variabili - qui o dove c'è la logica effettiva
 
 	// si potrebbe togliere il const e permettere di cambiare fov al player quando si trova in prima persona - magari con un'altra enum
-	const float FOVy = glm::radians(60.0f);
+	const float FOVy = glm::radians(70.0f);
 	const float nearPlane = 0.1f;
-	const float farPlane = 40.f;
+	const float farPlane = 150.0f;
 
 	// Player starting point + initialization
-	const glm::vec3 StartingPosition = glm::vec3(10.0f, 1.0f, 10.0f);
+	const glm::vec3 StartingPosition = glm::vec3(5.0f, 1.6f, 5.0f);
 	glm::vec3 playerPosition = StartingPosition,
 			  oldPos = StartingPosition,
 			  newPos = StartingPosition,
@@ -148,7 +158,7 @@ protected:
 	const float playerMaxPitch = glm::radians(70.0f);
 	// Rotation and motion speed - ancora da definire per bene
 	const float ROT_SPEED = glm::radians(120.0f);
-	const float MOVE_SPEED = 2.0f;
+	const float MOVE_SPEED = 20.0f;
 
 	// Parameters needed in the damping implementation - 3rd person view
 	const float LAMBDAROT = 20.0f,
@@ -173,7 +183,7 @@ protected:
 		windowHeight = 600;
 		windowTitle = "Enhanced RiSiKo!";
 		windowResizable = GLFW_TRUE;
-		initialBackgroundColor = { 0.0f, 0.005f, 0.01f, 1.0f };
+		initialBackgroundColor = { 0.80f, 1.0f, 1.0f, 1.0f };
 
 		// Descriptor pool sizes
 		/* FinalProject */
@@ -195,9 +205,10 @@ protected:
 	void localInit() {
 		/* FinalProject */
 		/* Init the new Data Set Layout */
-		DSLVertexPlain.init(this, {
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
+		DSLVertexFloor.init(this, {
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
+					{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
+					{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
 			});
 
 		DSLMonoColor.init(this, { 
@@ -212,7 +223,6 @@ protected:
 		// Vertex descriptors
 
 		/* FinalProject */
-		/* Define the new Vertex Format */
 		VMonoColor.init(this, { 
 			// this array contains the bindings
 			// first  element : the binding number
@@ -249,12 +259,14 @@ protected:
 					   sizeof(glm::vec2), UV}
 			});
 
-		VVertexPlain.init(this, {
-			{0, sizeof(VertexPlain), VK_VERTEX_INPUT_RATE_VERTEX}
+		VVertexFloor.init(this, {
+			{0, sizeof(VertexMonoColor), VK_VERTEX_INPUT_RATE_VERTEX}
 			}, {
-				{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexPlain, pos),
+				{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexMonoColor, pos),
 					   sizeof(glm::vec3), POSITION},
-				{0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexPlain, UV),
+				{0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexMonoColor, norm),
+					   sizeof(glm::vec3), NORMAL},
+				{0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexMonoColor, UV),
 					   sizeof(glm::vec2), UV}
 			});
 
@@ -266,8 +278,8 @@ protected:
 		/* FinalProject */
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
 		PMonoColor.init(this, &VMonoColor, "shaders/Tank/MonoColorVert.spv", "shaders/Tank/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
-		PVertexPlain.init(this, &VVertexPlain, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLGubo, &DSLVertexPlain });
-		PVertexPlain.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL,
+		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
+		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL,
 			VK_CULL_MODE_NONE, false);
 		// Models, textures and Descriptors (values assigned to the uniforms)
 
@@ -280,14 +292,14 @@ protected:
 		MTank.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
 		MFloor.vertices = 
 			//		POS			   UV
-			{ { {-50.0f, 25.0f, 0} , {1,1} } , 
-			  { { 50.0f, 25.0f, 0} , {1,0} } , 			
-			  { {-50.0f,-25.0f, 0} , {0,1} } ,
-			  { { 50.0f,-25.0f, 0} , {0,0} } };
+		{     { {-50.0f, 0.2f, 25.0f} , {0,1,0} , {0,1} } ,
+			  { { 50.0f, 0.2f, 25.0f} , {0,1,0} , {1,1} } ,
+			  { {-50.0f, 0.2f,-25.0f} , {0,1,0} , {0,0} } ,
+			  { { 50.0f, 0.2f,-25.0f} , {0,1,0} , {1,0} } };
 		MFloor.indices = 
 			{ 0, 1, 2, 
 			  1, 2, 3 };
-		MFloor.initMesh(this, &VVertexPlain);
+		MFloor.initMesh(this, &VVertexFloor);
 
 		// Create the textures
 		// The second parameter is the file name
@@ -305,7 +317,7 @@ protected:
 		/* FinalProject */
 		/* Create the new pipeline */
 		PMonoColor.create();
-		PVertexPlain.create();
+		PVertexFloor.create();
 		// Here you define the data set
 
 		/* FinalProject */
@@ -320,10 +332,11 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
 					{1, TEXTURE, 0, &TTank}
 			});
-		printf("\n\n ZIODIAOSDIASD \n\n");
-		DSFloor.init(this, &DSLVertexPlain, {
-					{0, UNIFORM, sizeof(PlainUniformBlock), nullptr},
-					{1, TEXTURE, 0, &TFloor}
+		
+		DSFloor.init(this, &DSLVertexFloor, {
+					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+					{1, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
+					{2, TEXTURE, 0, &TFloor}
 			});
 
 		DSGubo.init(this, &DSLGubo, {
@@ -338,7 +351,7 @@ protected:
 		/* FinalProject */
 		/* cleanup the new pipeline */
 		PMonoColor.cleanup();
-		PVertexPlain.cleanup();
+		PVertexFloor.cleanup();
 		// Cleanup datasets
 		/* FinalProject */
 		/* cleanup the dataset for the room */
@@ -360,17 +373,18 @@ protected:
 		/* FinalProject */
 		/* Cleanup the mesh for the room */
 		MTank.cleanup();
+		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
 		/* Cleanup the new Descriptor Set Layout */
 		DSLMonoColor.cleanup();
-		DSLVertexPlain.cleanup();
+		DSLVertexFloor.cleanup();
 		DSLGubo.cleanup();
 
 		/* FinalProject */
 		/* Destroy the new pipeline */
 		PMonoColor.destroy();
-		PVertexPlain.destroy();
+		PVertexFloor.destroy();
 	}
 
 	// Here it is the creation of the command buffer:
@@ -394,19 +408,15 @@ protected:
 			static_cast<uint32_t>(MTank.indices.size()), 1, 0, 0, 0);
 
 		// binds the pipeline
-		PVertexPlain.bind(commandBuffer);
-		// binds the gubo to the command buffer to our new pipeline and set 0
-		DSGubo.bind(commandBuffer, PVertexPlain, 0, currentImage);
+		PVertexFloor.bind(commandBuffer);
 		// binds the mesh
 		MFloor.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSFloor.bind(commandBuffer, PVertexPlain, 1, currentImage);
+		DSFloor.bind(commandBuffer, PVertexFloor, 0, currentImage);
 		// record the drawing command in the command buffer
-		/*vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);*/
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
 		
-
-
 	}
 
 	// Here is where you update the uniforms.
@@ -452,7 +462,9 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
 
-		uboFloor.visible = 1;
+		uboFloor.mMat = glm::mat4(1);
+		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
+		uboFloor.nMat = glm::inverse(glm::transpose(uboFloor.mMat));
 		DSFloor.map(currentImage, &uboFloor, sizeof(uboFloor), 0);
 
 	}
@@ -671,9 +683,7 @@ protected:
 
 		glm::mat4 ViewMatrix, ProjectionMatrix, ViewProjectionMatrix;
 
-		float angle, n = 0.1f, f = 40.0f;
-		angle = glm::radians(90.0f);
-		ProjectionMatrix = glm::perspective(angle, Ar, n, f);
+		ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
 		ProjectionMatrix[1][1] *= -1;
 
 		ViewMatrix =
