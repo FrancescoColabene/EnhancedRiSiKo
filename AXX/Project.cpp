@@ -158,10 +158,13 @@ protected:
 
 	const glm::vec3 PlayerStartingPosition = glm::vec3(5.0f, PLAYER_HEIGHT, 5.0f);
 	const glm::vec3 TankStartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 playerPosition = PlayerStartingPosition,
-			  oldPos = TankStartingPosition,
-			  newPos = TankStartingPosition,
-			  tankPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3
+		playerPosition = PlayerStartingPosition,
+		oldPos = TankStartingPosition,
+		newPos = TankStartingPosition,
+		tankPosition = glm::vec3(0.0f, 0.0f, 0.0f),
+		heliPosition = glm::vec3(10.0f, 1.68f, 0.0f); // 1.68f è l'altezza giusta dal pavimento - sarebbe da parametrizzare per la gravità
+
 
 	glm::mat4 oldViewPrj = glm::mat4(1);
 
@@ -185,7 +188,7 @@ protected:
 	// Rotation and motion speed - ancora da definire per bene
 	const float ROT_SPEED = glm::radians(120.0f);
 	const float MOVE_SPEED = 20.0f;
-	const float TANK_ROT_SPEED = glm::radians(0.1f);
+	const float TANK_ROT_SPEED = glm::radians(45.0f);
 	const float TANK_MOVE_SPEED = 3.0f;
 	
 
@@ -694,7 +697,7 @@ protected:
 
 			// player rotating independently from the camera
 			if (m.z == 0 && m.x != 0)
-				tankYaw -= m.x * TANK_ROT_SPEED;
+				tankYaw -= m.x * TANK_ROT_SPEED * deltaT;
 
 			break;
 
@@ -707,7 +710,7 @@ protected:
 		case HELI:
 
 
-			// updating player position
+			// updating heli position
 
 			// blocking the player from going under the terrain
 			if ((playerPosition + uy * MOVE_SPEED * m.y * deltaT).y < 0.0f) {
@@ -732,7 +735,7 @@ protected:
 		// Tank World Matrix -- capire se è necessario quel +45 gradi o se si può sistemare in altra maniera
 		tempWorld =
 			glm::translate(glm::mat4(1), tankPosition) *
-			glm::mat4(glm::quat(glm::vec3(0, tankYaw + glm::radians(45.0f), 0))) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, tankYaw + glm::radians(45.0f), 0))) *
 			glm::scale(glm::mat4(1), glm::vec3(1));
 		WorldTank = tempWorld;
 		
@@ -740,7 +743,11 @@ protected:
 
 
 		// Heli World Matrix
-		WorldHeli = glm::mat4(1);
+		tempWorld = 
+			glm::translate(glm::mat4(1), heliPosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0))) *
+			glm::scale(glm::mat4(1), glm::vec3(1));
+		WorldHeli = tempWorld;
 
 
 		switch (gameState)
@@ -753,7 +760,6 @@ protected:
 				transition = true;
 				gameState = GameState::TANK;
 				yaw = tankYaw - glm::radians(45.0f);
-				pitch = 0.0f;
 			}
 			break;
 		case TANK:
