@@ -135,10 +135,11 @@ protected:
 
 	// Player starting point + initialization
 	const glm::vec3 StartingPosition = glm::vec3(5.0f, 1.6f, 5.0f);
+	const glm::vec3 TankStartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 playerPosition = StartingPosition,
-			  oldPos = StartingPosition,
-			  newPos = StartingPosition,
-			  tankPosition = glm::vec3(0.0f,0.0f,0.0f);
+			  oldPos = TankStartingPosition,
+			  newPos = TankStartingPosition,
+			  tankPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	// si potrebbe usare una sola variabile e cambiarla dentro allo switch, not sure
 	// Camera target height and distance for the tank view
@@ -159,18 +160,21 @@ protected:
 	// Rotation and motion speed - ancora da definire per bene
 	const float ROT_SPEED = glm::radians(120.0f);
 	const float MOVE_SPEED = 20.0f;
+	const float TANK_ROT_SPEED = glm::radians(0.1f);
+	const float TANK_MOVE_SPEED = 3.0f;
+	
 
 	// Parameters needed in the damping implementation - 3rd person view
 	const float LAMBDAROT = 20.0f,
 				LAMBDAMOV = 10.0f,
-				DEADZONE = 0.2f;
+				DEADZONE = 1.0f;
 	
 	// queste molto probabilmente andrebbero messe sotto
 	// Angles and variables needed to implement damping - independet player rotation from the camera
 	float yaw = 0.0f,	  pitch = 0.0f,		roll = 0.0f,  // il roll sarebbe da togliere
 		  yawOld = 0.0f,  pitchOld = 0.0f,
 		  yawNew = 0.0f,  pitchNew = 0.0f,
-		  tankYaw = 0.0f, tankYawOld = 0.0;
+		  tankYaw = 0.0f;
 
 
 	// ------------------------------------------------------------------------------------
@@ -502,7 +506,7 @@ protected:
 		// LOGIC OF THE APPLICATION
 		//TODO implement first person view
 
-		// computing angles (except pitch) 
+		// computing camera angles (except pitch) 
 		yaw -= ROT_SPEED * r.y * deltaT;
 		roll += ROT_SPEED * r.z * deltaT;
 
@@ -532,9 +536,17 @@ protected:
 
 		case TANK:
 
+			ux = glm::vec3(	glm::rotate(glm::mat4(1),
+							tankYaw,
+							glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
+			uy = glm::vec3(0, 1, 0);
+			uz = glm::vec3( glm::rotate(glm::mat4(1),
+							tankYaw,
+							glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
+
 			// updating tank position - DA MODIFICARE
-			tankPosition += ux * MOVE_SPEED * m.x * deltaT;
-			tankPosition += uz * MOVE_SPEED * m.z * deltaT;
+			tankPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
+			tankPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
 
 			// updating pitch
 			pitch -= ROT_SPEED * r.x * deltaT;
@@ -562,9 +574,8 @@ protected:
 			}
 
 			// player rotating independently from the camera
-			if (m.x != 0 || m.z != 0)
-				tankYaw = yaw + (atan2(m.z, m.x));
-			tankYawOld = tankYaw;
+			if (m.z == 0 && m.x != 0 )
+				tankYaw -= m.x * TANK_ROT_SPEED;
 
 			break;
 
@@ -599,10 +610,10 @@ protected:
 
 		
 
-		// Tank World Matrix
+		// Tank World Matrix -- capire se è necessario quel +45 gradi o se si può sistemare in altra maniera
 		tempWorld =
 			glm::translate(glm::mat4(1), tankPosition) *
-			glm::mat4(glm::quat(glm::vec3(0, tankYaw, 0))) *
+			glm::mat4(glm::quat(glm::vec3(0, tankYaw + glm::radians(45.0f), 0))) *
 			glm::scale(glm::mat4(1), glm::vec3(1));
 		WorldTank = tempWorld;
 
