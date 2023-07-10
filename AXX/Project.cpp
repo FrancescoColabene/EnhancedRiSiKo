@@ -124,6 +124,9 @@ protected:
 
 	// Other application parameters
 	GameState gameState = GameState::WALK;
+	bool transition = false;
+	float transitionTimer = 0.0f;
+
 
 
 	// guardando A16 e A07 non sto capendo dove andrebbero messe queste variabili - qui o dove c'è la logica effettiva
@@ -134,12 +137,17 @@ protected:
 	const float farPlane = 150.0f;
 
 	// Player starting point + initialization
-	const glm::vec3 StartingPosition = glm::vec3(5.0f, 1.6f, 5.0f);
+	const float PLAYER_HEIGHT = 1.6f;
+
+	const glm::vec3 PlayerStartingPosition = glm::vec3(5.0f, PLAYER_HEIGHT, 5.0f);
 	const glm::vec3 TankStartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 playerPosition = StartingPosition,
+	glm::vec3 playerPosition = PlayerStartingPosition,
 			  oldPos = TankStartingPosition,
 			  newPos = TankStartingPosition,
 			  tankPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	glm::mat4 oldViewPrj = glm::mat4(1);
+
 
 	// si potrebbe usare una sola variabile e cambiarla dentro allo switch, not sure
 	// Camera target height and distance for the tank view
@@ -166,8 +174,9 @@ protected:
 
 	// Parameters needed in the damping implementation - 3rd person view
 	const float LAMBDAROT = 20.0f,
-				LAMBDAMOV = 10.0f,
-				DEADZONE = 1.0f;
+				LAMBDAMOV = 7.5f,
+				DEADZONE = 1.0f,
+				LAMBDATRANS = 8.0f;
 	
 	// queste molto probabilmente andrebbero messe sotto
 	// Angles and variables needed to implement damping - independet player rotation from the camera
@@ -458,7 +467,6 @@ protected:
 		
 		/* FinalProject */
 		/* fill the uniform block for the room. Identical to the one of the body of the slot machine */
-		// THE TANK IS THE PLAYER RN, BCS I USE THE WORLD AND VIEWPROJ MATRIX CALCULATED FOR THE PLAYER FOR ITS COORDINATES.
 		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; uboTank.sColor = glm::vec3(1.0f);
 		uboTank.mvpMat = ViewPrj * WorldTank;
 		uboTank.mMat = WorldTank;
@@ -506,52 +514,65 @@ protected:
 		// LOGIC OF THE APPLICATION
 		//TODO implement first person view
 
-		// computing camera angles (except pitch) 
-		yaw -= ROT_SPEED * r.y * deltaT;
-		roll += ROT_SPEED * r.z * deltaT;
-
-		// computing the movement versors (the player position update it's dependant on the gameState)
-		glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1),
-								 yaw,
-								 glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
+		// computing camera angles (except pitch) when not transitioning
+		if (!transition) {
+			yaw -= ROT_SPEED * r.y * deltaT;
+			roll += ROT_SPEED * r.z * deltaT;
+		}
+		
+		// This is the only common movement vector between states 
 		glm::vec3 uy = glm::vec3(0, 1, 0);
-		glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1),
-								 yaw,
-								 glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
-
+		
 		switch (gameState)
 		{
 		case WALK:
 
-			// updating player position
-			playerPosition += ux * MOVE_SPEED * m.x * deltaT;
-			playerPosition += uz * MOVE_SPEED * m.z * deltaT;
-			// updating pitch
-			pitch -= ROT_SPEED * r.x * deltaT;
-			pitch = pitch < playerMinPitch ? playerMinPitch :
-				(pitch > playerMaxPitch ? playerMaxPitch : pitch);
+			// computing the movement versors 
+			glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1),
+				yaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
 
+			glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1),
+				yaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
+
+			if (!transition) {
+				// updating player position
+				playerPosition += ux * MOVE_SPEED * m.x * deltaT;
+				playerPosition += uz * MOVE_SPEED * m.z * deltaT;
+				// updating pitch
+				pitch -= ROT_SPEED * r.x * deltaT;
+				pitch = pitch < playerMinPitch ? playerMinPitch :
+					(pitch > playerMaxPitch ? playerMaxPitch : pitch);
+			}
+		
 			break;
 
 		case TANK:
 
-			ux = glm::vec3(	glm::rotate(glm::mat4(1),
-							tankYaw,
-							glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
-			uy = glm::vec3(0, 1, 0);
-			uz = glm::vec3( glm::rotate(glm::mat4(1),
-							tankYaw,
-							glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
+			ux = glm::vec3(glm::rotate(glm::mat4(1),
+				tankYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
+			uz = glm::vec3(glm::rotate(glm::mat4(1),
+				tankYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
-			// updating tank position - DA MODIFICARE
-			tankPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
-			tankPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
+			if (!transition) {
+				// updating tank position
+				tankPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
+				tankPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
+				// updating pitch
+				pitch -= ROT_SPEED * r.x * deltaT;
+				pitch = pitch < vehicleMinPitch ? vehicleMinPitch :
+					(pitch > vehicleMaxPitch ? vehicleMaxPitch : pitch);
+			}
+			else {
+				// si potrebbe parametrizzare
+				pitchOld = 0.0f;
+				pitchNew = 0.0f;
+			}
 
-			// updating pitch
-			pitch -= ROT_SPEED * r.x * deltaT;
-			pitch = pitch < vehicleMinPitch ? vehicleMinPitch :
-				(pitch > vehicleMaxPitch ? vehicleMaxPitch : pitch);
 
 			// damping implementation
 			pitchNew = (pitchOld * exp(-LAMBDAROT * deltaT)) + pitch * (1 - exp(-LAMBDAROT * deltaT));
@@ -568,20 +589,20 @@ protected:
 			if (updatePos) {
 				newPos = (oldPos * exp(-LAMBDAMOV * deltaT)) + tankPosition * (1 - exp(-LAMBDAMOV * deltaT));
 				oldPos = newPos;
-				if (oldPos == tankPosition) {
+				if (glm::length((tankPosition - oldPos)) < (DEADZONE / 50.0f)) {
 					updatePos = false;
 				}
 			}
 
 			// player rotating independently from the camera
-			if (m.z == 0 && m.x != 0 )
+			if (m.z == 0 && m.x != 0)
 				tankYaw -= m.x * TANK_ROT_SPEED;
 
 			break;
 
 		case CAR:
 
-			
+
 
 			break;
 
@@ -589,7 +610,7 @@ protected:
 
 
 			// updating player position
-			
+
 			// blocking the player from going under the terrain
 			if ((playerPosition + uy * MOVE_SPEED * m.y * deltaT).y < 0.0f) {
 				playerPosition.y = 0.0f;
@@ -600,11 +621,11 @@ protected:
 			}
 
 			break;
-
 		default:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
 		}
+		
 
 		// UPDATE ALL WORLD MATRICES (except for the player, since it doesn't have a model)
 
@@ -630,11 +651,12 @@ protected:
 
 			ViewPrj = MakeViewProjectionMatrix(Ar, yaw, pitch, roll, playerPosition);
 
-			if (glfwGetKey(window, GLFW_KEY_T)) {
+			if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
+				transition = true;
 				gameState = GameState::TANK;
-
+				yaw = tankYaw - glm::radians(45.0f);
+				pitch = 0.0f;
 			}
-
 			break;
 		case TANK:
 
@@ -659,8 +681,15 @@ protected:
 
 			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-			if (glfwGetKey(window, GLFW_KEY_Y)) {
+			if (!transition &&  glfwGetKey(window, GLFW_KEY_Y)) {
+				transition = true;
 				gameState = GameState::WALK;
+				yaw = tankYaw - glm::radians(45.0f);
+				pitch = 0.0f;
+				playerPosition = tankPosition;
+				playerPosition.y = PLAYER_HEIGHT;
+				playerPosition.x += 3 * sin(tankYaw);
+				playerPosition.z += 3 * cos(tankYaw);
 
 			}
 
@@ -685,6 +714,17 @@ protected:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
 		}
+
+		// si potrebbe parametrizzare
+		if (transition) {
+			transitionTimer += deltaT;
+			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
+			if (transitionTimer > 0.9f) { 
+				transition = false; 
+				transitionTimer = 0.0f;
+			}
+		}
+		oldViewPrj = ViewPrj;
 
 	}
 
