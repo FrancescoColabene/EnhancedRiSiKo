@@ -101,21 +101,38 @@ protected:
 	/* FinalProject */
 	/* Add the variable that will contain the model for the room */
 	Model<VertexMonoColor> MTank;
+	Model<VertexMonoColor> MHeliFull;
+	Model<VertexMonoColor> MHeliBody;
+	Model<VertexMonoColor> MHeliBladeFront;
+	Model<VertexMonoColor> MHeliBladeBack;
 	Model<VertexMonoColor> MFloor;
 
 	DescriptorSet DSGubo;
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
 	DescriptorSet DSTank;
+	DescriptorSet DSHeliFull;
+	DescriptorSet DSHeliBody;
+	DescriptorSet DSHeliBladeFront;
+	DescriptorSet DSHeliBladeBack;
 	DescriptorSet DSFloor;
 
 	Texture TTank;
+	Texture THeliFull;
+	Texture THeliBody;
+	Texture THeliBladeFront;
+	Texture THeliBladeBack;
 	Texture TFloor;
 
 	// C++ storage for uniform variables
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank;
+	MeshUniformBlock uboHeliFull; 
+	MeshUniformBlock uboHeliBody;
+	MeshUniformBlock uboHeliBladeFront;
+	MeshUniformBlock uboHeliBladeBack;
+	
 	UniformBufferObject uboFloor;
 
 	GlobalUniformBlock gubo;
@@ -201,9 +218,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 3; // prima era 9
-		texturesInPool = 2;
-		setsInPool = 3; // prima era 9
+		uniformBlocksInPool = 7; // prima era 9
+		texturesInPool = 6;
+		setsInPool = 7; // prima era 9
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -303,6 +320,10 @@ protected:
 		/* FinalProject */
 		/* load the mesh for the room, contained in OBJ file "Room.obj" */
 		MTank.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
+		MHeliFull.init(this, &VMonoColor, "Models/HeliFull.obj", OBJ);
+		MHeliBody.init(this, &VMonoColor, "Models/HeliBody.obj", OBJ);
+		MHeliBladeFront.init(this, &VMonoColor, "Models/HeliBladeFront.obj", OBJ);
+		MHeliBladeBack.init(this, &VMonoColor, "Models/HeliBladeBack.obj", OBJ);
 		MFloor.vertices = 
 			//		POS			   UV
 		{     { {-50.0f, 0.2f, 25.0f} , {0,1,0} , {0,1} } ,
@@ -317,6 +338,10 @@ protected:
 		// Create the textures
 		// The second parameter is the file name
 		TTank.init(this, "textures/Red.png");
+		THeliFull.init(this, "textures/Red.png");
+		THeliBody.init(this, "textures/Red.png");
+		THeliBladeFront.init(this, "textures/Red.png");
+		THeliBladeBack.init(this, "textures/Red.png");
 		TFloor.init(this, "textures/RisikoMap.png");
 
 		// Init local variables
@@ -345,7 +370,27 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
 					{1, TEXTURE, 0, &TTank}
 			});
+
+		DSHeliFull.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &THeliFull}
+			});
 		
+		DSHeliBody.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &THeliBody}
+			});
+
+		DSHeliBladeFront.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &THeliBladeFront}
+			});
+
+		DSHeliBladeBack.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &THeliBladeBack}
+			});
+
 		DSFloor.init(this, &DSLVertexFloor, {
 					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 					{1, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
@@ -369,6 +414,10 @@ protected:
 		/* FinalProject */
 		/* cleanup the dataset for the room */
 		DSTank.cleanup();
+		DSHeliFull.cleanup();
+		DSHeliBody.cleanup();
+		DSHeliBladeFront.cleanup();
+		DSHeliBladeBack.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
 	}
@@ -380,12 +429,20 @@ protected:
 	void localCleanup() {
 		// Cleanup textures
 		TTank.cleanup();
+		THeliFull.cleanup();
+		THeliBody.cleanup();
+		THeliBladeFront.cleanup();
+		THeliBladeBack.cleanup();
 		TFloor.cleanup();
 
 		// Cleanup models
 		/* FinalProject */
 		/* Cleanup the mesh for the room */
 		MTank.cleanup();
+		MHeliFull.cleanup();
+		MHeliBody.cleanup();
+		MHeliBladeFront.cleanup();
+		MHeliBladeBack.cleanup();
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
@@ -419,6 +476,39 @@ protected:
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MTank.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MHeliFull.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSHeliFull.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MHeliFull.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MHeliBody.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSHeliBody.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MHeliBody.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MHeliBladeFront.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSHeliBladeFront.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MHeliBladeFront.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MHeliBladeBack.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSHeliBladeBack.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MHeliBladeBack.indices.size()), 1, 0, 0, 0);
+
 
 		// binds the pipeline
 		PVertexFloor.bind(commandBuffer);
@@ -473,6 +563,14 @@ protected:
 		uboTank.nMat = glm::inverse(glm::transpose(WorldTank));
 		/* map the uniform data block to the GPU */
 		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
+
+		uboHeliFull.amb = 1.0f; uboHeliFull.gamma = 180.0f; uboHeliFull.sColor = glm::vec3(1.0f);
+		uboHeliFull.mvpMat = ViewPrj * WorldHeli;
+		uboHeliFull.mMat = WorldHeli;
+		uboHeliFull.nMat = glm::inverse(glm::transpose(WorldHeli));
+		/* map the uniform data block to the GPU */
+		DSHeliFull.map(currentImage, &uboHeliFull, sizeof(uboHeliFull), 0);
+
 
 		uboFloor.mMat = glm::mat4(1);
 		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
@@ -637,12 +735,12 @@ protected:
 			glm::mat4(glm::quat(glm::vec3(0, tankYaw + glm::radians(45.0f), 0))) *
 			glm::scale(glm::mat4(1), glm::vec3(1));
 		WorldTank = tempWorld;
-
+		
 		// Car World Matrix
 
 
 		// Heli World Matrix
-
+		WorldHeli = glm::mat4(1);
 
 
 		switch (gameState)
