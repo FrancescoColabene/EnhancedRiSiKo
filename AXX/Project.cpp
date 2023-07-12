@@ -190,6 +190,11 @@ protected:
 	const float MOVE_SPEED = 20.0f;
 	const float TANK_ROT_SPEED = glm::radians(45.0f);
 	const float TANK_MOVE_SPEED = 3.0f;
+	const float HELI_MOVE_SPEED = 5.0f; 
+	const float HELI_VERT_SPEED = 3.0f;
+	const float HELI_ROT_SPEED = glm::radians(0.3f);
+
+
 	
 
 	// Parameters needed in the damping implementation - 3rd person view
@@ -203,7 +208,8 @@ protected:
 	float yaw = 0.0f,	  pitch = 0.0f,		roll = 0.0f,  // il roll sarebbe da togliere
 		  yawOld = 0.0f,  pitchOld = 0.0f,
 		  yawNew = 0.0f,  pitchNew = 0.0f,
-		  tankYaw = 0.0f;
+		  tankYaw = 0.0f, 
+		  heliYaw = 0.0f, heliRoll = 0.0f;
 
 
 	// ------------------------------------------------------------------------------------
@@ -647,7 +653,7 @@ protected:
 				pitch = pitch < playerMinPitch ? playerMinPitch :
 					(pitch > playerMaxPitch ? playerMaxPitch : pitch);
 			}
-		
+
 			break;
 
 		case TANK:
@@ -709,28 +715,91 @@ protected:
 
 		case HELI:
 
+			ux = glm::vec3(glm::rotate(glm::mat4(1),
+				heliYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
+			uz = glm::vec3(glm::rotate(glm::mat4(1),
+				heliYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
 			// updating heli position
+			uy = glm::vec3(0, 1, 0);
 
-			// blocking the player from going under the terrain
-			if ((playerPosition + uy * MOVE_SPEED * m.y * deltaT).y < 0.0f) {
-				playerPosition.y = 0.0f;
-			}
-			else
-			{
-				playerPosition += uy * MOVE_SPEED * m.y * deltaT;
+			if (!transition) {
+				// updating heli position
+				heliPosition += ux * HELI_MOVE_SPEED * m.z * deltaT;
+				heliPosition += uz * HELI_ROT_SPEED * m.z * deltaT;
+
+				// blocking the helicopter from going under the terrain
+				if ((heliPosition + uy * HELI_VERT_SPEED * m.y * deltaT).y < 0.0f) {
+					heliPosition.y = 0.0f;
+				}
+				else
+				{
+					heliPosition += uy * HELI_VERT_SPEED * m.y * deltaT;
+				}
+
+					// updating pitch
+					pitch -= ROT_SPEED * r.x * deltaT;
+					pitch = pitch < vehicleMinPitch ? vehicleMinPitch :
+						(pitch > vehicleMaxPitch ? vehicleMaxPitch : pitch);
+
+
+					// damping implementation
+					pitchNew = (pitchOld * exp(-LAMBDAROT * deltaT)) + pitch * (1 - exp(-LAMBDAROT * deltaT));
+					pitchOld = pitchNew;
+
+					yawNew = (yawOld * exp(-LAMBDAROT * deltaT)) + yaw * (1 - exp(-LAMBDAROT * deltaT));
+					yawOld = yawNew;
+
+					// deadzone implementation
+					if (glm::length((heliPosition - oldPos)) > DEADZONE) {
+						updatePos = true;
+					}
+
+					if (updatePos) {
+						newPos = (oldPos * exp(-LAMBDAMOV * deltaT)) + heliPosition * (1 - exp(-LAMBDAMOV * deltaT));
+						oldPos = newPos;
+						if (glm::length((heliPosition - oldPos)) < (DEADZONE / 50.0f)) {
+							updatePos = false;
+						}
+					}
+
+					// player rotating independently from the camera
+					if (m.z == 0 && m.x != 0)
+						heliYaw -= m.x * HELI_ROT_SPEED;
+
+					heliRoll -= m.z * 0.002f;
+					if (heliRoll < -0.2f)
+						heliRoll = -0.2f;
+					else if (heliRoll > 0.2f)
+						heliRoll = 0.2f;
+
+					if (m.z == 0 && heliRoll < 0)
+						heliRoll -= -0.002f;
+					else if (m.z == 0 && heliRoll > 0)
+						heliRoll -= 0.002f;
+					break;
+
+
+
+				}
+			else {
+				// si potrebbe parametrizzare
+				pitchOld = 0.0f;
+				pitchNew = 0.0f;
 			}
 
 			break;
 		default:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
-		}
-		
+			}
 
-		// UPDATE ALL WORLD MATRICES (except for the player, since it doesn't have a model)
 
-		
+			// UPDATE ALL WORLD MATRICES (except for the player, since it doesn't have a model)
+
+
 
 		// Tank World Matrix -- capire se è necessario quel +45 gradi o se si può sistemare in altra maniera
 		tempWorld =
@@ -742,95 +811,132 @@ protected:
 		// Car World Matrix
 
 
-		// Heli World Matrix
-		tempWorld = 
-			glm::translate(glm::mat4(1), heliPosition) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0))) *
-			glm::scale(glm::mat4(1), glm::vec3(1));
-		WorldHeli = tempWorld;
-
-
-		switch (gameState)
-		{
-		case WALK:
-
-			ViewPrj = MakeViewProjectionMatrix(Ar, yaw, pitch, roll, playerPosition);
-
-			if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
-				transition = true;
-				gameState = GameState::TANK;
-				yaw = tankYaw - glm::radians(45.0f);
-			}
-			break;
-		case TANK:
-
-			// World Matrix used for the camera
-			tempWorld = glm::translate(glm::mat4(1), oldPos) *
-				glm::mat4(glm::quat(glm::vec3(0, yawNew, 0))) *
+			// Heli World Matrix
+			tempWorld =
+				glm::translate(glm::mat4(1), heliPosition) *
+				glm::mat4(glm::quat(glm::vec3(0, heliYaw, 0))) * glm::mat4(glm::quat(glm::vec3(0, 0, heliRoll))) *
 				glm::scale(glm::mat4(1), glm::vec3(1));
+			WorldHeli = tempWorld;
 
-			// calculating the View-Projection Matrix
-			glm::vec4 temp = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(pitchNew)), tankCamDist * cos(pitchNew), 1);
-			camPos = glm::vec3(temp.x, temp.y, temp.z);
-
-
+			glm::vec4 temp; //TODO sistemare la posizione 
 			glm::vec3 targetPointedPosition;
-			targetPointedPosition = glm::vec3(newPos.x, newPos.y + tankCamHeight, newPos.z);
+			switch (gameState)
+			{
+			case WALK:
 
-			ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
-			ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
+				ViewPrj = MakeViewProjectionMatrix(Ar, yaw, pitch, roll, playerPosition);
 
-			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
-			ProjectionMatrix[1][1] *= -1;
+				if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
+					transition = true;
+					gameState = GameState::TANK;
+					yaw = tankYaw - glm::radians(45.0f);
+					pitch = 0.0f;
+				}
+				else {
+					if (!transition && glfwGetKey(window, GLFW_KEY_5)) {
+						transition = true;
+						gameState = GameState::HELI;
+						yaw = heliYaw - glm::radians(45.0f);
+						pitch = 0.0f;
+					}
+				}
+				break;
+			case TANK:
 
-			ViewPrj = ProjectionMatrix * ViewMatrix;
+				// World Matrix used for the camera
+				tempWorld = glm::translate(glm::mat4(1), oldPos) *
+					glm::mat4(glm::quat(glm::vec3(0, yawNew, 0))) *
+					glm::scale(glm::mat4(1), glm::vec3(1));
 
-			if (!transition &&  glfwGetKey(window, GLFW_KEY_Y)) {
-				transition = true;
-				gameState = GameState::WALK;
-				yaw = tankYaw - glm::radians(45.0f);
-				pitch = 0.0f;
-				playerPosition = tankPosition;
-				playerPosition.y = PLAYER_HEIGHT;
-				playerPosition.x += 3 * sin(tankYaw);
-				playerPosition.z += 3 * cos(tankYaw);
+				// calculating the View-Projection Matrix
+				temp = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(pitchNew)), tankCamDist * cos(pitchNew), 1);
+				camPos = glm::vec3(temp.x, temp.y, temp.z);
 
+
+				targetPointedPosition = glm::vec3(newPos.x, newPos.y + tankCamHeight, newPos.z);
+
+				ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
+				ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
+
+				ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+				ProjectionMatrix[1][1] *= -1;
+
+				ViewPrj = ProjectionMatrix * ViewMatrix;
+
+				if (!transition && glfwGetKey(window, GLFW_KEY_Y)) {
+					transition = true;
+					gameState = GameState::WALK;
+					yaw = tankYaw - glm::radians(45.0f);
+					pitch = 0.0f;
+					playerPosition = tankPosition;
+					playerPosition.y = PLAYER_HEIGHT;
+					playerPosition.x += 3 * sin(tankYaw);
+					playerPosition.z += 3 * cos(tankYaw);
+
+				}
+
+				break;
+			case CAR:
+
+				if (glfwGetKey(window, GLFW_KEY_Y)) {
+					gameState = GameState::WALK;
+
+				}
+
+				break;
+			case HELI:
+
+				// World Matrix used for the camera
+				tempWorld = glm::translate(glm::mat4(1), oldPos) *
+					glm::mat4(glm::quat(glm::vec3(0, yawNew, 0))) *
+					glm::scale(glm::mat4(1), glm::vec3(1));
+
+				// calculating the View-Projection Matrix
+				temp = tempWorld * glm::vec4(0, heliCamHeight + (heliCamDist * sin(pitchNew)), heliCamDist * cos(pitchNew), 1);
+				camPos = glm::vec3(temp.x, temp.y, temp.z);
+
+
+
+				targetPointedPosition = glm::vec3(newPos.x, newPos.y + heliCamHeight, newPos.z);
+
+				ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
+				ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
+
+				ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+				ProjectionMatrix[1][1] *= -1;
+
+				ViewPrj = ProjectionMatrix * ViewMatrix;
+
+				if (!transition && glfwGetKey(window, GLFW_KEY_6)) {
+					transition = true;
+					gameState = GameState::WALK;
+					yaw = heliYaw - glm::radians(45.0f);
+					pitch = 0.0f;
+					playerPosition = heliPosition;
+					playerPosition.y = PLAYER_HEIGHT;
+					playerPosition.x += 3 * sin(heliYaw);
+					playerPosition.z += 3 * cos(heliYaw);
+
+				}
+
+				break;
+			default:
+				printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
+				break;
 			}
 
-			break;
-		case CAR:
-
-			if (glfwGetKey(window, GLFW_KEY_Y)) {
-				gameState = GameState::WALK;
-
+			// si potrebbe parametrizzare
+			if (transition) {
+				transitionTimer += deltaT;
+				ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
+				if (transitionTimer > 0.9f) {
+					transition = false;
+					transitionTimer = 0.0f;
+				}
 			}
+			oldViewPrj = ViewPrj;
 
-			break;
-		case HELI:
-
-			if (glfwGetKey(window, GLFW_KEY_Y)) {
-				gameState = GameState::WALK;
-
-			}
-
-			break;
-		default:
-			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
-			break;
 		}
-
-		// si potrebbe parametrizzare
-		if (transition) {
-			transitionTimer += deltaT;
-			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
-			if (transitionTimer > 0.9f) { 
-				transition = false; 
-				transitionTimer = 0.0f;
-			}
-		}
-		oldViewPrj = ViewPrj;
-
-	}
 
 	glm::mat4 MakeViewProjectionMatrix(float Ar, float Yaw, float Pitch, float Roll, glm::vec3 Pos) {
 		// The view matrix uses the Look-in-Direction model, with vector <pos> specifying the 
