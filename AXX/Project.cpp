@@ -209,7 +209,7 @@ protected:
 		  yawOld = 0.0f,  pitchOld = 0.0f,
 		  yawNew = 0.0f,  pitchNew = 0.0f,
 		  tankYaw = 0.0f, 
-		  heliYaw = 0.0f, heliRoll = 0.0f;
+		  heliYaw = 0.0f, heliRoll = 0.0f, heliPitch = 0.0f;
 
 
 	// ------------------------------------------------------------------------------------
@@ -692,7 +692,7 @@ protected:
 			if (glm::length((tankPosition - oldPos)) > DEADZONE) {
 				updatePos = true;
 			}
-
+			//TODO newPos e oldPos devono diventare oldTankPos e newOldPos idem per pitchnew e pitchold e yaw...
 			if (updatePos) {
 				newPos = (oldPos * exp(-LAMBDAMOV * deltaT)) + tankPosition * (1 - exp(-LAMBDAMOV * deltaT));
 				oldPos = newPos;
@@ -728,7 +728,7 @@ protected:
 			if (!transition) {
 				// updating heli position
 				heliPosition += ux * HELI_MOVE_SPEED * m.z * deltaT;
-				heliPosition += uz * HELI_ROT_SPEED * m.z * deltaT;
+				heliPosition += uz * HELI_MOVE_SPEED * -m.x * deltaT;
 
 				// blocking the helicopter from going under the terrain
 				if ((heliPosition + uy * HELI_VERT_SPEED * m.y * deltaT).y < 0.0f) {
@@ -764,23 +764,42 @@ protected:
 							updatePos = false;
 						}
 					}
-
-					// player rotating independently from the camera
-					if (m.z == 0 && m.x != 0)
-						heliYaw -= m.x * HELI_ROT_SPEED;
-
-					heliRoll -= m.z * 0.002f;
+					
+					//heliYaw -= m.x * HELI_ROT_SPEED;
+					
+					heliRoll -= m.z * 0.5f * deltaT;
+					heliPitch -= (-m.x) * 0.5f * deltaT; 
+					
 					if (heliRoll < -0.2f)
 						heliRoll = -0.2f;
 					else if (heliRoll > 0.2f)
 						heliRoll = 0.2f;
+					
+					if (m.z == 0 && heliRoll < 0.01f) {
+						heliRoll -= -0.5f * deltaT;
+						if (heliRoll > 0) heliRoll = 0.0f;
+					}
+					else if (m.z == 0 && heliRoll > 0.01f) {
+						heliRoll -= 0.5f * deltaT;
+						if (heliRoll < 0) heliRoll = 0.0f;
+					}
 
-					if (m.z == 0 && heliRoll < 0)
-						heliRoll -= -0.002f;
-					else if (m.z == 0 && heliRoll > 0)
-						heliRoll -= 0.002f;
-					break;
+					
+					if (heliPitch < -0.2f)
+						heliPitch = -0.2f;
+					else if (heliPitch > 0.2f)
+						heliPitch = 0.2f;
 
+					if (m.x == 0 && heliPitch < 0.01f) {
+						heliPitch -= -0.5f * deltaT;
+						if (heliPitch > 0) heliPitch = 0.0f;
+					}
+					else if (m.x == 0 && heliPitch > 0.01f) {
+						heliPitch -= 0.5f * deltaT;
+						if (heliPitch < 0) heliPitch = 0.0f;
+					}
+
+					
 
 
 				}
@@ -814,7 +833,9 @@ protected:
 			// Heli World Matrix
 			tempWorld =
 				glm::translate(glm::mat4(1), heliPosition) *
-				glm::mat4(glm::quat(glm::vec3(0, heliYaw, 0))) * glm::mat4(glm::quat(glm::vec3(0, 0, heliRoll))) *
+				glm::mat4(glm::quat(glm::vec3(0.0f, heliYaw, 0.0f))) *
+				glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
+				glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
 				glm::scale(glm::mat4(1), glm::vec3(1));
 			WorldHeli = tempWorld;
 
