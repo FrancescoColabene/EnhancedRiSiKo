@@ -155,17 +155,23 @@ protected:
 
 	// Player starting point + initialization
 	const float PLAYER_HEIGHT = 1.6f;
+	const float HELI_GROUND = 1.68f; // 1.68f è l'altezza giusta dal pavimento
 
-	const glm::vec3 PlayerStartingPosition = glm::vec3(5.0f, PLAYER_HEIGHT, 5.0f);
-	const glm::vec3 TankStartingPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+	const glm::vec3 PlayerStartingPos = glm::vec3(4.0f, PLAYER_HEIGHT, 8.0f);
+	const glm::vec3 TankStartingPos = glm::vec3(0.0f, 0.0f, 0.0f);
+	const glm::vec3 HeliStartingPos = glm::vec3(10.0f, HELI_GROUND, 0.0f); 
 	glm::vec3
-		playerPosition = PlayerStartingPosition,
-		oldPos = TankStartingPosition,
-		newPos = TankStartingPosition,
-		tankPosition = glm::vec3(0.0f, 0.0f, 0.0f),
-		heliPosition = glm::vec3(10.0f, 1.68f, 0.0f); // 1.68f è l'altezza giusta dal pavimento - sarebbe da parametrizzare per la gravità
+		playerPosition = PlayerStartingPos,
+		// Tank, heli and car need 3 variables for the damping implementation
+		tankPosition = TankStartingPos,
+		oldTankPos = TankStartingPos,
+		newTankPos = TankStartingPos,
 
+		heliPosition = HeliStartingPos,
+		oldHeliPos = HeliStartingPos,
+		newHeliPos = HeliStartingPos; 
 
+	// The ViewPrj of the previous frame: it's used during the transition 
 	glm::mat4 oldViewPrj = glm::mat4(1);
 
 
@@ -173,25 +179,28 @@ protected:
 	// Camera target height and distance for the tank view
 	const float tankCamHeight = 2.5f;
 	const float tankCamDist = 9.0f;
-	// Camera target height and distance for the tank view
+	// Camera target height and distance for the heli view
+	const float heliCamHeight = 3.0f;
+	const float heliCamDist = 12.0f;
+	// Camera target height and distance for the car view
 	const float carCamHeight = 2.5f;
 	const float carCamDist = 9.0f;
-	// Camera target height and distance for the tank view
-	const float heliCamHeight = 2.5f;
-	const float heliCamDist = 9.0f;
-	// Camera Pitch limits - valid for every view 
+	// Camera Pitch limits for every vehicle
 	const float vehicleMinPitch = glm::radians(-8.75f);
 	const float vehicleMaxPitch = glm::radians(60.0f);
-	// Camera Pitch limits - valid for every view 
+	const float vehicleStandardPitch = glm::radians(15.0f);
+	// Camera Pitch limits for the player
 	const float playerMinPitch = glm::radians(-50.0f);
 	const float playerMaxPitch = glm::radians(70.0f);
 	// Rotation and motion speed - ancora da definire per bene
-	const float ROT_SPEED = glm::radians(120.0f);
-	const float MOVE_SPEED = 20.0f;
+	const float CAM_ROT_SPEED = glm::radians(120.0f);
+	const float PLAYER_MOVE_SPEED = 20.0f;
+
 	const float TANK_ROT_SPEED = glm::radians(45.0f);
 	const float TANK_MOVE_SPEED = 3.0f;
-	const float HELI_MOVE_SPEED = 5.0f; 
-	const float HELI_VERT_SPEED = 3.0f;
+
+	const float HELI_MOVE_SPEED = 8.0f; 
+	const float HELI_VERT_SPEED = 5.0f;
 	const float HELI_ROT_SPEED = glm::radians(0.3f);
 
 
@@ -205,11 +214,13 @@ protected:
 	
 	// queste molto probabilmente andrebbero messe sotto
 	// Angles and variables needed to implement damping - independet player rotation from the camera
-	float yaw = 0.0f,	  pitch = 0.0f,		roll = 0.0f,  // il roll sarebbe da togliere
-		  yawOld = 0.0f,  pitchOld = 0.0f,
-		  yawNew = 0.0f,  pitchNew = 0.0f,
+	float camYaw = 0.0f, camPitch = 0.0f, camRoll = 0.0f,  // il roll sarebbe da togliere
+		  camYawOld = 0.0f, camYawNew = 0.0f, 
+		  camPitchOld = 0.0f, camPitchNew = 0.0f,
+		// tank angles
 		  tankYaw = 0.0f, 
-		  heliYaw = 0.0f, heliRoll = 0.0f, heliPitch = 0.0f;
+		// heli angles
+		  heliYaw = glm::radians(0.0f), heliRoll = 0.0f, heliPitch = 0.0f;
 
 
 	// ------------------------------------------------------------------------------------
@@ -335,10 +346,10 @@ protected:
 		MHeliBladeBack.init(this, &VMonoColor, "Models/HeliBladeBack.obj", OBJ);
 		MFloor.vertices = 
 			//		POS			   UV
-		{     { {-50.0f, 0.2f, 25.0f} , {0,1,0} , {0,1} } ,
-			  { { 50.0f, 0.2f, 25.0f} , {0,1,0} , {1,1} } ,
-			  { {-50.0f, 0.2f,-25.0f} , {0,1,0} , {0,0} } ,
-			  { { 50.0f, 0.2f,-25.0f} , {0,1,0} , {1,0} } };
+		{     { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
+			  { { 100.0f, 0.2f, 50.0f} , {0,1,0} , {1,1} } ,
+			  { {-100.0f, 0.2f,-50.0f} , {0,1,0} , {0,0} } ,
+			  { { 100.0f, 0.2f,-50.0f} , {0,1,0} , {1,0} } };
 		MFloor.indices = 
 			{ 0, 1, 2, 
 			  1, 2, 3 };
@@ -623,41 +634,46 @@ protected:
 
 		// computing camera angles (except pitch) when not transitioning
 		if (!transition) {
-			yaw -= ROT_SPEED * r.y * deltaT;
-			roll += ROT_SPEED * r.z * deltaT;
+			camYaw -= CAM_ROT_SPEED * r.y * deltaT;
+			camRoll += CAM_ROT_SPEED * r.z * deltaT;
+			camPitch -= CAM_ROT_SPEED * r.x * deltaT;
+			// TODO forse il pitch si può gestire in modo migliore. Ora updato qua (sempre uguale) e poi limito in base al mezzo
 		}
-		
-		// This is the only common movement vector between states 
-		glm::vec3 uy = glm::vec3(0, 1, 0);
+		// damping implementation
+		camPitchNew = (camPitchOld * exp(-LAMBDAROT * deltaT)) + camPitch * (1 - exp(-LAMBDAROT * deltaT));
+		camPitchOld = camPitchNew;
+		camYawNew = (camYawOld * exp(-LAMBDAROT * deltaT)) + camYaw * (1 - exp(-LAMBDAROT * deltaT));
+		camYawOld = camYawNew;
 
-		
+		glm::vec3 ux, uy, uz;
+
 		switch (gameState)
 		{
 		case WALK:
 
 			// computing the movement versors 
-			glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1),
-				yaw,
+			ux = glm::vec3(glm::rotate(glm::mat4(1),
+				camYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
 
-			glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1),
-				yaw,
+			uz = glm::vec3(glm::rotate(glm::mat4(1),
+				camYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
 			if (!transition) {
 				// updating player position
-				playerPosition += ux * MOVE_SPEED * m.x * deltaT;
-				playerPosition += uz * MOVE_SPEED * m.z * deltaT;
-				// updating pitch
-				pitch -= ROT_SPEED * r.x * deltaT;
-				pitch = pitch < playerMinPitch ? playerMinPitch :
-					(pitch > playerMaxPitch ? playerMaxPitch : pitch);
+				playerPosition += ux * PLAYER_MOVE_SPEED * m.x * deltaT;
+				playerPosition += uz * PLAYER_MOVE_SPEED * m.z * deltaT;
+				// limiting pitch
+				camPitch = camPitch < playerMinPitch ? playerMinPitch :
+					(camPitch > playerMaxPitch ? playerMaxPitch : camPitch);
 			}
 
 			break;
 
 		case TANK:
 
+			// computing the movement versors 
 			ux = glm::vec3(glm::rotate(glm::mat4(1),
 				tankYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
@@ -669,41 +685,30 @@ protected:
 				// updating tank position
 				tankPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
 				tankPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
-				// updating pitch
-				pitch -= ROT_SPEED * r.x * deltaT;
-				pitch = pitch < vehicleMinPitch ? vehicleMinPitch :
-					(pitch > vehicleMaxPitch ? vehicleMaxPitch : pitch);
+				// limiting pitch
+				camPitch = camPitch < vehicleMinPitch ? vehicleMinPitch :
+					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
 			}
 			else {
-				// si potrebbe parametrizzare
-				pitchOld = 0.0f;
-				pitchNew = 0.0f;
+				// TODO si potrebbe parametrizzare
+				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
 			}
 
-
-			// damping implementation
-			pitchNew = (pitchOld * exp(-LAMBDAROT * deltaT)) + pitch * (1 - exp(-LAMBDAROT * deltaT));
-			pitchOld = pitchNew;
-
-			yawNew = (yawOld * exp(-LAMBDAROT * deltaT)) + yaw * (1 - exp(-LAMBDAROT * deltaT));
-			yawOld = yawNew;
-
 			// deadzone implementation
-			if (glm::length((tankPosition - oldPos)) > DEADZONE) {
+			if (glm::length((tankPosition - oldTankPos)) > DEADZONE) {
 				updatePos = true;
 			}
 			//TODO newPos e oldPos devono diventare oldTankPos e newOldPos idem per pitchnew e pitchold e yaw...
 			if (updatePos) {
-				newPos = (oldPos * exp(-LAMBDAMOV * deltaT)) + tankPosition * (1 - exp(-LAMBDAMOV * deltaT));
-				oldPos = newPos;
-				if (glm::length((tankPosition - oldPos)) < (DEADZONE / 50.0f)) {
+				newTankPos = (oldTankPos * exp(-LAMBDAMOV * deltaT)) + tankPosition * (1 - exp(-LAMBDAMOV * deltaT));
+				oldTankPos = newTankPos;
+				if (glm::length((tankPosition - oldTankPos)) < (DEADZONE / 50.0f)) {
 					updatePos = false;
 				}
 			}
 
-			// player rotating independently from the camera
-			if (m.z == 0 && m.x != 0)
-				tankYaw -= m.x * TANK_ROT_SPEED * deltaT;
+			// tank orientation
+			tankYaw -= m.x * TANK_ROT_SPEED * deltaT;
 
 			break;
 
@@ -715,110 +720,94 @@ protected:
 
 		case HELI:
 
+			// we use camYaw because the movement of the heli depends on the camera
 			ux = glm::vec3(glm::rotate(glm::mat4(1),
-				heliYaw,
+				camYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
 			uz = glm::vec3(glm::rotate(glm::mat4(1),
-				heliYaw,
+				camYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
-
-			// updating heli position
 			uy = glm::vec3(0, 1, 0);
 
 			if (!transition) {
 				// updating heli position
-				heliPosition += ux * HELI_MOVE_SPEED * m.z * deltaT;
-				heliPosition += uz * HELI_MOVE_SPEED * -m.x * deltaT;
+				heliPosition += ux * HELI_MOVE_SPEED * m.x * deltaT;
+				heliPosition += uz * HELI_MOVE_SPEED * m.z * deltaT;
 
 				// blocking the helicopter from going under the terrain
-				if ((heliPosition + uy * HELI_VERT_SPEED * m.y * deltaT).y < 0.0f) {
-					heliPosition.y = 0.0f;
+				if ((heliPosition + uy * HELI_VERT_SPEED * m.y * deltaT).y < HELI_GROUND) {
+					heliPosition.y = HELI_GROUND;
 				}
 				else
 				{
 					heliPosition += uy * HELI_VERT_SPEED * m.y * deltaT;
 				}
 
-					// updating pitch
-					pitch -= ROT_SPEED * r.x * deltaT;
-					pitch = pitch < vehicleMinPitch ? vehicleMinPitch :
-						(pitch > vehicleMaxPitch ? vehicleMaxPitch : pitch);
+				// updating pitch
+				camPitch = camPitch < vehicleMinPitch ? vehicleMinPitch :
+					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
+				heliYaw = camYaw + glm::radians(90.0f);
 
+				// updating heli inclination
+				heliRoll -= m.z * 0.5f * deltaT;
+				heliPitch -= (-m.x) * 0.5f * deltaT;
 
-					// damping implementation
-					pitchNew = (pitchOld * exp(-LAMBDAROT * deltaT)) + pitch * (1 - exp(-LAMBDAROT * deltaT));
-					pitchOld = pitchNew;
+				// limiting the inclination
+				if (heliRoll < -0.2f)
+					heliRoll = -0.2f;
+				else if (heliRoll > 0.2f)
+					heliRoll = 0.2f;
 
-					yawNew = (yawOld * exp(-LAMBDAROT * deltaT)) + yaw * (1 - exp(-LAMBDAROT * deltaT));
-					yawOld = yawNew;
-
-					// deadzone implementation
-					if (glm::length((heliPosition - oldPos)) > DEADZONE) {
-						updatePos = true;
-					}
-
-					if (updatePos) {
-						newPos = (oldPos * exp(-LAMBDAMOV * deltaT)) + heliPosition * (1 - exp(-LAMBDAMOV * deltaT));
-						oldPos = newPos;
-						if (glm::length((heliPosition - oldPos)) < (DEADZONE / 50.0f)) {
-							updatePos = false;
-						}
-					}
-					
-					//heliYaw -= m.x * HELI_ROT_SPEED;
-					
-					heliRoll -= m.z * 0.5f * deltaT;
-					heliPitch -= (-m.x) * 0.5f * deltaT; 
-					
-					if (heliRoll < -0.2f)
-						heliRoll = -0.2f;
-					else if (heliRoll > 0.2f)
-						heliRoll = 0.2f;
-					
-					if (m.z == 0 && heliRoll < 0.01f) {
-						heliRoll -= -0.5f * deltaT;
-						if (heliRoll > 0) heliRoll = 0.0f;
-					}
-					else if (m.z == 0 && heliRoll > 0.01f) {
-						heliRoll -= 0.5f * deltaT;
-						if (heliRoll < 0) heliRoll = 0.0f;
-					}
-
-					
-					if (heliPitch < -0.2f)
-						heliPitch = -0.2f;
-					else if (heliPitch > 0.2f)
-						heliPitch = 0.2f;
-
-					if (m.x == 0 && heliPitch < 0.01f) {
-						heliPitch -= -0.5f * deltaT;
-						if (heliPitch > 0) heliPitch = 0.0f;
-					}
-					else if (m.x == 0 && heliPitch > 0.01f) {
-						heliPitch -= 0.5f * deltaT;
-						if (heliPitch < 0) heliPitch = 0.0f;
-					}
-
-					
-
-
+				if (m.z == 0 && heliRoll < 0.01f) {
+					heliRoll -= -0.5f * deltaT;
+					if (heliRoll > 0) heliRoll = 0.0f;
 				}
-			else {
-				// si potrebbe parametrizzare
-				pitchOld = 0.0f;
-				pitchNew = 0.0f;
+				else if (m.z == 0 && heliRoll > 0.01f) {
+					heliRoll -= 0.5f * deltaT;
+					if (heliRoll < 0) heliRoll = 0.0f;
+				}
+
+				if (heliPitch < -0.2f)
+					heliPitch = -0.2f;
+				else if (heliPitch > 0.2f)
+					heliPitch = 0.2f;
+
+				if (m.x == 0 && heliPitch < 0.01f) {
+					heliPitch -= -0.5f * deltaT;
+					if (heliPitch > 0) heliPitch = 0.0f;
+				}
+				else if (m.x == 0 && heliPitch > 0.01f) {
+					heliPitch -= 0.5f * deltaT;
+					if (heliPitch < 0) heliPitch = 0.0f;
+				}
+
 			}
+			else {
+				// TODO si potrebbe parametrizzare
+				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
+			}
+			
+			// deadzone implementation
+			if (glm::length((heliPosition - oldHeliPos)) > DEADZONE) {
+				updatePos = true;
+			}
+
+			if (updatePos) {
+				newHeliPos = (oldHeliPos * exp(-LAMBDAMOV * deltaT)) + heliPosition * (1 - exp(-LAMBDAMOV * deltaT));
+				oldHeliPos = newHeliPos;
+				if (glm::length((heliPosition - oldHeliPos)) < (DEADZONE / 50.0f)) {
+					updatePos = false;
+				}
+			}
+
 
 			break;
 		default:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
-			}
+		}
 
-
-			// UPDATE ALL WORLD MATRICES (except for the player, since it doesn't have a model)
-
-
+		// UPDATE ALL WORLD MATRICES (except for the player, since it doesn't have a model)
 
 		// Tank World Matrix -- capire se è necessario quel +45 gradi o se si può sistemare in altra maniera
 		tempWorld =
@@ -830,134 +819,129 @@ protected:
 		// Car World Matrix
 
 
-			// Heli World Matrix
-			tempWorld =
-				glm::translate(glm::mat4(1), heliPosition) *
-				glm::mat4(glm::quat(glm::vec3(0.0f, heliYaw, 0.0f))) *
-				glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
-				glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
+		// Heli World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), heliPosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, heliYaw, 0.0f))) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
+			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(1));
+		WorldHeli = tempWorld;
+
+		glm::vec4 temp; //TODO sistemare la posizione 
+		glm::vec3 targetPointedPosition;
+		switch (gameState)
+		{
+		case WALK:
+
+			ViewPrj = MakeViewProjectionMatrix(Ar, camYaw, camPitch, camRoll, playerPosition);
+
+			if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
+				transition = true;
+				gameState = GameState::TANK;
+				camYaw = tankYaw - glm::radians(45.0f);
+			}
+			if (!transition && glfwGetKey(window, GLFW_KEY_5)) {
+				transition = true;
+				gameState = GameState::HELI;
+				camYaw = heliYaw - glm::radians(90.0f);
+			}
+			break;
+		case TANK:
+
+			// World Matrix used for the camera
+			tempWorld = glm::translate(glm::mat4(1), oldTankPos) *
+				glm::mat4(glm::quat(glm::vec3(0, camYawNew, 0))) *
 				glm::scale(glm::mat4(1), glm::vec3(1));
-			WorldHeli = tempWorld;
 
-			glm::vec4 temp; //TODO sistemare la posizione 
-			glm::vec3 targetPointedPosition;
-			switch (gameState)
-			{
-			case WALK:
-
-				ViewPrj = MakeViewProjectionMatrix(Ar, yaw, pitch, roll, playerPosition);
-
-				if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
-					transition = true;
-					gameState = GameState::TANK;
-					yaw = tankYaw - glm::radians(45.0f);
-					pitch = 0.0f;
-				}
-				else {
-					if (!transition && glfwGetKey(window, GLFW_KEY_5)) {
-						transition = true;
-						gameState = GameState::HELI;
-						yaw = heliYaw - glm::radians(45.0f);
-						pitch = 0.0f;
-					}
-				}
-				break;
-			case TANK:
-
-				// World Matrix used for the camera
-				tempWorld = glm::translate(glm::mat4(1), oldPos) *
-					glm::mat4(glm::quat(glm::vec3(0, yawNew, 0))) *
-					glm::scale(glm::mat4(1), glm::vec3(1));
-
-				// calculating the View-Projection Matrix
-				temp = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(pitchNew)), tankCamDist * cos(pitchNew), 1);
-				camPos = glm::vec3(temp.x, temp.y, temp.z);
+			// calculating the View-Projection Matrix
+			temp = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(camPitchNew)), tankCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(temp.x, temp.y, temp.z);
 
 
-				targetPointedPosition = glm::vec3(newPos.x, newPos.y + tankCamHeight, newPos.z);
+			targetPointedPosition = glm::vec3(newTankPos.x, newTankPos.y + tankCamHeight, newTankPos.z);
 
-				ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
-				ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
+			ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
+			ViewMatrix = glm::rotate(glm::mat4(1), camRoll, glm::vec3(0, 0, 1)) * ViewMatrix;
 
-				ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
-				ProjectionMatrix[1][1] *= -1;
+			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+			ProjectionMatrix[1][1] *= -1;
 
-				ViewPrj = ProjectionMatrix * ViewMatrix;
+			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-				if (!transition && glfwGetKey(window, GLFW_KEY_Y)) {
-					transition = true;
-					gameState = GameState::WALK;
-					yaw = tankYaw - glm::radians(45.0f);
-					pitch = 0.0f;
-					playerPosition = tankPosition;
-					playerPosition.y = PLAYER_HEIGHT;
-					playerPosition.x += 3 * sin(tankYaw);
-					playerPosition.z += 3 * cos(tankYaw);
+			if (!transition && glfwGetKey(window, GLFW_KEY_Y)) {
+				transition = true;
+				gameState = GameState::WALK;
+				camYaw = tankYaw - glm::radians(45.0f);
+				camPitch = 0.0f;
+				playerPosition = tankPosition;
+				playerPosition.y = PLAYER_HEIGHT;
+				playerPosition.x += 3 * sin(tankYaw);
+				playerPosition.z += 3 * cos(tankYaw);
 
-				}
-
-				break;
-			case CAR:
-
-				if (glfwGetKey(window, GLFW_KEY_Y)) {
-					gameState = GameState::WALK;
-
-				}
-
-				break;
-			case HELI:
-
-				// World Matrix used for the camera
-				tempWorld = glm::translate(glm::mat4(1), oldPos) *
-					glm::mat4(glm::quat(glm::vec3(0, yawNew, 0))) *
-					glm::scale(glm::mat4(1), glm::vec3(1));
-
-				// calculating the View-Projection Matrix
-				temp = tempWorld * glm::vec4(0, heliCamHeight + (heliCamDist * sin(pitchNew)), heliCamDist * cos(pitchNew), 1);
-				camPos = glm::vec3(temp.x, temp.y, temp.z);
-
-
-
-				targetPointedPosition = glm::vec3(newPos.x, newPos.y + heliCamHeight, newPos.z);
-
-				ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
-				ViewMatrix = glm::rotate(glm::mat4(1), roll, glm::vec3(0, 0, 1)) * ViewMatrix;
-
-				ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
-				ProjectionMatrix[1][1] *= -1;
-
-				ViewPrj = ProjectionMatrix * ViewMatrix;
-
-				if (!transition && glfwGetKey(window, GLFW_KEY_6)) {
-					transition = true;
-					gameState = GameState::WALK;
-					yaw = heliYaw - glm::radians(45.0f);
-					pitch = 0.0f;
-					playerPosition = heliPosition;
-					playerPosition.y = PLAYER_HEIGHT;
-					playerPosition.x += 3 * sin(heliYaw);
-					playerPosition.z += 3 * cos(heliYaw);
-
-				}
-
-				break;
-			default:
-				printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
-				break;
 			}
 
-			// si potrebbe parametrizzare
-			if (transition) {
-				transitionTimer += deltaT;
-				ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
-				if (transitionTimer > 0.9f) {
-					transition = false;
-					transitionTimer = 0.0f;
-				}
-			}
-			oldViewPrj = ViewPrj;
+			break;
+		case CAR:
 
+			if (glfwGetKey(window, GLFW_KEY_Y)) {
+				gameState = GameState::WALK;
+
+			}
+
+			break;
+		case HELI:
+
+			// World Matrix used for the camera
+			tempWorld = glm::translate(glm::mat4(1), oldHeliPos) *
+				glm::mat4(glm::quat(glm::vec3(0, camYawNew, 0))) *
+				glm::scale(glm::mat4(1), glm::vec3(1));
+
+			// calculating the View-Projection Matrix
+			temp = tempWorld * glm::vec4(0, heliCamHeight + (heliCamDist * sin(camPitchNew)), heliCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(temp.x, temp.y, temp.z);
+
+
+			targetPointedPosition = glm::vec3(newHeliPos.x, newHeliPos.y + heliCamHeight, newHeliPos.z);
+
+			ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
+			ViewMatrix = glm::rotate(glm::mat4(1), camRoll, glm::vec3(0, 0, 1)) * ViewMatrix;
+
+			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+			ProjectionMatrix[1][1] *= -1;
+
+			ViewPrj = ProjectionMatrix * ViewMatrix;
+
+			if (!transition && glfwGetKey(window, GLFW_KEY_6)) {
+				transition = true;	
+				gameState = GameState::WALK;
+				camYaw = heliYaw - glm::radians(45.0f);
+				camPitch = 0.0f;
+				playerPosition = heliPosition;
+				playerPosition.y = PLAYER_HEIGHT;
+				playerPosition.x += 3 * sin(heliYaw);
+				playerPosition.z += 3 * cos(heliYaw);
+
+			}
+
+			break;
+		default:
+			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
+			break;
 		}
+
+		// si potrebbe parametrizzare
+		if (transition) {
+			transitionTimer += deltaT;
+			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
+			if (transitionTimer > 0.9f) {
+				transition = false;
+				transitionTimer = 0.0f;
+			}
+		}
+		oldViewPrj = ViewPrj;
+
+	}
 
 	glm::mat4 MakeViewProjectionMatrix(float Ar, float Yaw, float Pitch, float Roll, glm::vec3 Pos) {
 		// The view matrix uses the Look-in-Direction model, with vector <pos> specifying the 
@@ -979,9 +963,13 @@ protected:
 		return ViewProjectionMatrix;
 	}
 
+	void SetPitches(float* pa, float* pb, float* pc, float value) {
+		*pa = value;
+		*pb = value;
+		*pc = value;
+	}
+
 };
-
-
 
 
 // This is the main: probably you do not need to touch this!
