@@ -146,8 +146,10 @@ protected:
 	// Other application parameters
 	GameState gameState = GameState::WALK;
 	bool transition = false;
+	bool possoScendere = true;
+	const float TRANS_DURATION = 0.9f;
 	float transitionTimer = 0.0f;
-
+	float closestDistance = 0.0f;
 
 
 	// guardando A16 e A07 non sto capendo dove andrebbero messe queste variabili - qui o dove c'è la logica effettiva
@@ -162,24 +164,23 @@ protected:
 	const float HELI_GROUND = 1.68f; // 1.68f è l'altezza giusta dal pavimento
 
 	const glm::vec3 PlayerStartingPos = glm::vec3(0.0f, PLAYER_HEIGHT, 0.0f);
-	const glm::vec3 TankStartingPos = glm::vec3(7.0f, 0.0f, -10.0f);
-	const glm::vec3 HeliStartingPos = glm::vec3(0.0f, HELI_GROUND, -10.0f);
-	const glm::vec3 CarStartingPos = glm::vec3(-7.0f, 0.0f, -10.0f);
+	const glm::vec3 TankStartingPos = glm::vec3(-7.0f, 0.0f, -12.0f);
+	const glm::vec3 CarStartingPos = glm::vec3(0.0f, 0.0f, -12.0f);
+	const glm::vec3 HeliStartingPos = glm::vec3(7.0f, HELI_GROUND, -12.0f);
 	glm::vec3
-			playerPosition = PlayerStartingPos,
-			// Tank, heli and car need 3 variables for the damping implementation
-			tankPosition = TankStartingPos,
-			oldTankPos = TankStartingPos,
-			newTankPos = TankStartingPos,
+		playerPosition = PlayerStartingPos,
+		// Tank, heli and car need 3 variables for the damping implementation
+		tankPosition = TankStartingPos,
+		oldTankPos = TankStartingPos,
+		newTankPos = TankStartingPos,
 
-			heliPosition = HeliStartingPos,
-			oldHeliPos = HeliStartingPos,
-			newHeliPos = HeliStartingPos,
+		carPosition = CarStartingPos,
+		oldCarPos = CarStartingPos,
+		newCarPos = CarStartingPos,
 
-			carPosition = CarStartingPos,
-			oldCarPos = CarStartingPos,
-			newCarPos = CarStartingPos;
-
+		heliPosition = HeliStartingPos,
+		oldHeliPos = HeliStartingPos,
+		newHeliPos = HeliStartingPos;
 
 	// The ViewPrj of the previous frame: it's used during the transition 
 	glm::mat4 oldViewPrj = glm::mat4(1);
@@ -189,12 +190,13 @@ protected:
 	// Camera target height and distance for the tank view
 	const float tankCamHeight = 2.5f;
 	const float tankCamDist = 9.0f;
-	// Camera target height and distance for the heli view
-	const float heliCamHeight = 3.0f;
-	const float heliCamDist = 12.0f;
 	// Camera target height and distance for the car view
 	const float carCamHeight = 2.5f;
 	const float carCamDist = 9.0f;
+	// Camera target height and distance for the heli view
+	const float heliCamHeight = 3.0f;
+	const float heliCamDist = 12.0f;
+	
 	// Camera Pitch limits for every vehicle
 	const float vehicleMinPitch = glm::radians(-8.75f);
 	const float vehicleMaxPitch = glm::radians(60.0f);
@@ -202,21 +204,23 @@ protected:
 	// Camera Pitch limits for the player
 	const float playerMinPitch = glm::radians(-50.0f);
 	const float playerMaxPitch = glm::radians(70.0f);
-	// Rotation and motion speed - ancora da definire per bene
+
+	// Interaction range to ride vehicles
+	const float INTERACTION_RANGE = 4.0f;
+
+	// Rotation speed of the camera, rotation speed of the vehicles and their movement speed
 	const float CAM_ROT_SPEED = glm::radians(120.0f);
+
 	const float PLAYER_MOVE_SPEED = 20.0f;
 
 	const float TANK_ROT_SPEED = glm::radians(35.0f);
 	const float TANK_MOVE_SPEED = 3.0f;
 
-	const float HELI_MOVE_SPEED = 8.0f; 
-	const float HELI_VERT_SPEED = 5.0f;
-
 	const float CAR_MOVE_SPEED = 12.0f;
 	const float CAR_ROT_SPEED = glm::radians(60.0f);
 
-
-	
+	const float HELI_MOVE_SPEED = 8.0f; 
+	const float HELI_VERT_SPEED = 5.0f;
 
 	// Parameters needed in the damping implementation - 3rd person view
 	const float LAMBDAROT = 20.0f,
@@ -645,8 +649,8 @@ protected:
 			// <bool fire> if the user has pressed a fire button (not required in this assignment)
 		float deltaT;
 		glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
-		bool fire = false;
-		getSixAxis(deltaT, m, r, fire);
+		bool action = false;
+		getSixAxis(deltaT, m, r, action);
 		// getSixAxis() is defined in Starter.hpp in the base class.
 		// It fills the float point variable passed in its first parameter with the time
 		// since the last call to the procedure.
@@ -666,8 +670,8 @@ protected:
 
 
 		// LOGIC OF THE APPLICATION
-		//TODO implement first person view
 
+		// TODO capire come gestire gli angoli che superano 2pi CONSIDERANDO il damping!
 		// computing camera angles (except pitch) when not transitioning
 		if (!transition) {
 			camYaw -= CAM_ROT_SPEED * r.y * deltaT;
@@ -726,7 +730,6 @@ protected:
 					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
 			}
 			else {
-				// TODO si potrebbe parametrizzare
 				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
 			}
 
@@ -760,14 +763,17 @@ protected:
 
 			if (!transition) {
 				// updating car position
-				carPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
-				carPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
+				carPosition += ux * CAR_MOVE_SPEED * m.z * deltaT;
+				carPosition += uz * CAR_MOVE_SPEED * m.z * deltaT;
 				// limiting pitch
 				camPitch = camPitch < vehicleMinPitch ? vehicleMinPitch :
 					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
+
+				// Rotate only when moving
+				if (m.z != 0 && m.x != 0)
+					carYaw -= m.z * m.x * CAR_ROT_SPEED * deltaT;
 			}
 			else {
-				// TODO si potrebbe parametrizzare
 				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
 			}
 
@@ -784,8 +790,6 @@ protected:
 				}
 			}
 
-			if (m.z != 0 && m.x != 0)
-				carYaw -= m.z * m.x * CAR_ROT_SPEED * deltaT;
 
 			break;
 
@@ -857,7 +861,6 @@ protected:
 
 			}
 			else {
-				// TODO si potrebbe parametrizzare
 				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
 			}
 			
@@ -906,7 +909,7 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(1));
 		WorldHeli = tempWorld;
 
-		glm::vec4 temp; //TODO sistemare la posizione 
+		glm::vec4 tempCamPos; //TODO sistemare la posizione 
 		glm::vec3 targetPointedPosition;
 		switch (gameState)
 		{
@@ -914,21 +917,6 @@ protected:
 
 			ViewPrj = MakeViewProjectionMatrix(Ar, camYaw, camPitch, camRoll, playerPosition);
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_1)) {
-				transition = true;
-				gameState = GameState::TANK;
-				camYaw = tankYaw - glm::radians(45.0f);
-			}
-			if (!transition && glfwGetKey(window, GLFW_KEY_3)) {
-				transition = true;
-				gameState = GameState::CAR;
-				camYaw = carYaw - glm::radians(45.0f);
-			}
-			if (!transition && glfwGetKey(window, GLFW_KEY_5)) {
-				transition = true;
-				gameState = GameState::HELI;
-				camYaw = heliYaw - glm::radians(90.0f);
-			}
 			break;
 		case TANK:
 
@@ -938,8 +926,8 @@ protected:
 				glm::scale(glm::mat4(1), glm::vec3(1));
 
 			// calculating the View-Projection Matrix
-			temp = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(camPitchNew)), tankCamDist * cos(camPitchNew), 1);
-			camPos = glm::vec3(temp.x, temp.y, temp.z);
+			tempCamPos = tempWorld * glm::vec4(0, tankCamHeight + (tankCamDist * sin(camPitchNew)), tankCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(tempCamPos.x, tempCamPos.y, tempCamPos.z);
 
 
 			targetPointedPosition = glm::vec3(newTankPos.x, newTankPos.y + tankCamHeight, newTankPos.z);
@@ -952,7 +940,7 @@ protected:
 
 			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_2)) {
+			if (possoScendere && !transition && action) {
 				transition = true;
 				gameState = GameState::WALK;
 				camYaw = tankYaw - glm::radians(45.0f);
@@ -973,8 +961,8 @@ protected:
 				glm::scale(glm::mat4(1), glm::vec3(1));
 
 			// calculating the View-Projection Matrix
-			temp = tempWorld * glm::vec4(0, carCamHeight + (carCamDist * sin(camPitchNew)), carCamDist * cos(camPitchNew), 1);
-			camPos = glm::vec3(temp.x, temp.y, temp.z);
+			tempCamPos = tempWorld * glm::vec4(0, carCamHeight + (carCamDist * sin(camPitchNew)), carCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(tempCamPos.x, tempCamPos.y, tempCamPos.z);
 
 
 			targetPointedPosition = glm::vec3(newCarPos.x, newCarPos.y + carCamHeight, newCarPos.z);
@@ -987,7 +975,7 @@ protected:
 
 			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_4)) {
+			if (possoScendere && !transition && action) {
 				transition = true;
 				gameState = GameState::WALK;
 				camYaw = carYaw - glm::radians(45.0f);
@@ -1008,8 +996,8 @@ protected:
 				glm::scale(glm::mat4(1), glm::vec3(1));
 
 			// calculating the View-Projection Matrix
-			temp = tempWorld * glm::vec4(0, heliCamHeight + (heliCamDist * sin(camPitchNew)), heliCamDist * cos(camPitchNew), 1);
-			camPos = glm::vec3(temp.x, temp.y, temp.z);
+			tempCamPos = tempWorld * glm::vec4(0, heliCamHeight + (heliCamDist * sin(camPitchNew)), heliCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(tempCamPos.x, tempCamPos.y, tempCamPos.z);
 
 
 			targetPointedPosition = glm::vec3(newHeliPos.x, newHeliPos.y + heliCamHeight, newHeliPos.z);
@@ -1022,7 +1010,7 @@ protected:
 
 			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_6)) {
+			if (possoScendere && !transition && action) {
 				transition = true;	
 				gameState = GameState::WALK;
 				camYaw = heliYaw - glm::radians(90.0f);
@@ -1044,13 +1032,86 @@ protected:
 		if (transition) {
 			transitionTimer += deltaT;
 			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
-			if (transitionTimer > 0.9f) {
+			if (transitionTimer > TRANS_DURATION) {
 				transition = false;
 				transitionTimer = 0.0f;
 			}
 		}
 		oldViewPrj = ViewPrj;
 
+		// If i'm not driving a vehicle, check for the closest one
+		if (gameState == GameState::WALK) {
+			GameState tempClosest = ClosestObject();
+			glm::vec3 posClosest = glm::vec3(0);
+			switch (tempClosest)
+			{
+			case WALK:
+				printf("\nCASINI FRA\n");
+				break;
+			case TANK:
+				posClosest = tankPosition;
+				break;
+			case CAR:
+				posClosest = carPosition;
+				break;
+			case HELI:
+				posClosest = heliPosition;
+				break;
+			default:
+				printf("\nC A S I N I   F R A\n");
+				break;
+			}
+			closestDistance = glm::length((playerPosition - posClosest));
+
+			// If i'm not transitioning and the closest vehicle is at a certain range, display the prompt to use it
+			if (!transition && closestDistance < INTERACTION_RANGE) {
+				// display prompt to drive a vehicle
+
+				if (action) {
+					possoScendere = false;
+					transition = true;
+					float angle = 0.0f;
+					switch (tempClosest)
+					{
+					case WALK:
+						printf("\nCASINI FRA\n");
+						break;
+					case TANK:
+						gameState = GameState::TANK;
+						angle = tankYaw - glm::radians(45.0f);
+						break;
+					case CAR:
+						gameState = GameState::CAR;
+						angle = carYaw - glm::radians(45.0f);
+						break;
+					case HELI:
+						gameState = GameState::HELI;
+						angle = heliYaw - glm::radians(90.0f);
+						break;
+					default:
+						printf("\nC A S I N I   F R A\n");
+						break;
+					}
+					camYaw = angle;
+				}
+			}
+
+		} 
+		
+		// possoScendere tracks the state of the fire button, to ignore new presses if the button is held down
+		if (!action)
+			possoScendere = true;
+
+	}
+
+
+
+
+	// Return the closest object to the player
+	GameState ClosestObject() {
+		return  glm::length((playerPosition - tankPosition)) < glm::length((playerPosition - carPosition)) ?
+				(glm::length((playerPosition - tankPosition)) < glm::length((playerPosition - heliPosition)) ? GameState::TANK : GameState::HELI) :
+				(glm::length((playerPosition - carPosition)) < glm::length((playerPosition - heliPosition)) ? GameState::CAR : GameState::HELI);
 	}
 
 	glm::mat4 MakeViewProjectionMatrix(float Ar, float Yaw, float Pitch, float Roll, glm::vec3 Pos) {
