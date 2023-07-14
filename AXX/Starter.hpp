@@ -1795,21 +1795,30 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		old_xpos = xpos; old_ypos = ypos;
 
 		const float MOUSE_RES = 1.0f;
-		// settare lo sticky a true significa che non perdo input se premo e lascio il tasto prima che venga controllato il suo stato
+		// Setting sticky to true permits to register inputs even if they are pressed and released in a timespan that is shorter than a frame
 		glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
-		// Disabilita la visione del mouse e permette lo scrolling infinito per la visuale
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		
-		
-		r.y = m_dx / MOUSE_RES;
-		r.x = m_dy / MOUSE_RES;
-		
-		/*
-		* Funzione per fare qualcosa alla pressione del tasto sinistro del mouse
-		
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+		// Variables neeeded to enable/disable the cursor
+		static bool cursor = false;
+		static bool released = true;
+		if (!cursor) {
+			// Disable the cursor and enable infinite scrolling
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			r.y = m_dx / MOUSE_RES;
+			r.x = m_dy / MOUSE_RES;
 		}
-		*/
+		else
+			// Reactivate the cursor to resize the window
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		
+		// The released variables tracks the state of the mouse and doesn't register new presses if it's held down
+		if (released && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+			cursor = !cursor;
+			released = false;
+		}
+		if (!released && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)
+			released = true;
+		
 
 
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {

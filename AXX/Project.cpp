@@ -105,6 +105,7 @@ protected:
 	Model<VertexMonoColor> MHeliBody;
 	Model<VertexMonoColor> MHeliBladeFront;
 	Model<VertexMonoColor> MHeliBladeBack;
+	Model<VertexMonoColor> MCar;
 	Model<VertexMonoColor> MFloor;
 
 	DescriptorSet DSGubo;
@@ -115,6 +116,7 @@ protected:
 	DescriptorSet DSHeliBody;
 	DescriptorSet DSHeliBladeFront;
 	DescriptorSet DSHeliBladeBack;
+	DescriptorSet DSCar;
 	DescriptorSet DSFloor;
 
 	Texture TTank;
@@ -122,6 +124,7 @@ protected:
 	Texture THeliBody;
 	Texture THeliBladeFront;
 	Texture THeliBladeBack;
+	Texture TCar;
 	Texture TFloor;
 
 	// C++ storage for uniform variables
@@ -132,7 +135,8 @@ protected:
 	MeshUniformBlock uboHeliBody;
 	MeshUniformBlock uboHeliBladeFront;
 	MeshUniformBlock uboHeliBladeBack;
-	
+	MeshUniformBlock uboCar;
+
 	UniformBufferObject uboFloor;
 
 	GlobalUniformBlock gubo;
@@ -157,19 +161,25 @@ protected:
 	const float PLAYER_HEIGHT = 1.6f;
 	const float HELI_GROUND = 1.68f; // 1.68f è l'altezza giusta dal pavimento
 
-	const glm::vec3 PlayerStartingPos = glm::vec3(4.0f, PLAYER_HEIGHT, 8.0f);
-	const glm::vec3 TankStartingPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	const glm::vec3 HeliStartingPos = glm::vec3(10.0f, HELI_GROUND, 0.0f); 
+	const glm::vec3 PlayerStartingPos = glm::vec3(0.0f, PLAYER_HEIGHT, 0.0f);
+	const glm::vec3 TankStartingPos = glm::vec3(7.0f, 0.0f, -10.0f);
+	const glm::vec3 HeliStartingPos = glm::vec3(0.0f, HELI_GROUND, -10.0f);
+	const glm::vec3 CarStartingPos = glm::vec3(-7.0f, 0.0f, -10.0f);
 	glm::vec3
-		playerPosition = PlayerStartingPos,
-		// Tank, heli and car need 3 variables for the damping implementation
-		tankPosition = TankStartingPos,
-		oldTankPos = TankStartingPos,
-		newTankPos = TankStartingPos,
+			playerPosition = PlayerStartingPos,
+			// Tank, heli and car need 3 variables for the damping implementation
+			tankPosition = TankStartingPos,
+			oldTankPos = TankStartingPos,
+			newTankPos = TankStartingPos,
 
-		heliPosition = HeliStartingPos,
-		oldHeliPos = HeliStartingPos,
-		newHeliPos = HeliStartingPos; 
+			heliPosition = HeliStartingPos,
+			oldHeliPos = HeliStartingPos,
+			newHeliPos = HeliStartingPos,
+
+			carPosition = CarStartingPos,
+			oldCarPos = CarStartingPos,
+			newCarPos = CarStartingPos;
+
 
 	// The ViewPrj of the previous frame: it's used during the transition 
 	glm::mat4 oldViewPrj = glm::mat4(1);
@@ -196,12 +206,14 @@ protected:
 	const float CAM_ROT_SPEED = glm::radians(120.0f);
 	const float PLAYER_MOVE_SPEED = 20.0f;
 
-	const float TANK_ROT_SPEED = glm::radians(45.0f);
+	const float TANK_ROT_SPEED = glm::radians(35.0f);
 	const float TANK_MOVE_SPEED = 3.0f;
 
 	const float HELI_MOVE_SPEED = 8.0f; 
 	const float HELI_VERT_SPEED = 5.0f;
-	const float HELI_ROT_SPEED = glm::radians(0.3f);
+
+	const float CAR_MOVE_SPEED = 12.0f;
+	const float CAR_ROT_SPEED = glm::radians(60.0f);
 
 
 	
@@ -218,9 +230,11 @@ protected:
 		  camYawOld = 0.0f, camYawNew = 0.0f, 
 		  camPitchOld = 0.0f, camPitchNew = 0.0f,
 		// tank angles
-		  tankYaw = 0.0f, 
+		  tankYaw = glm::radians(45.0f),
 		// heli angles
-		  heliYaw = glm::radians(0.0f), heliRoll = 0.0f, heliPitch = 0.0f;
+		  heliYaw = glm::radians(90.0f), heliRoll = 0.0f, heliPitch = 0.0f,
+		// car angles
+		  carYaw = glm::radians(45.0f);
 
 
 	// ------------------------------------------------------------------------------------
@@ -238,9 +252,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 7; // prima era 9
-		texturesInPool = 6;
-		setsInPool = 7; // prima era 9
+		uniformBlocksInPool = 8; // prima era 9
+		texturesInPool = 7;
+		setsInPool = 8; // prima era 9
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -329,8 +343,8 @@ protected:
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
 		PMonoColor.init(this, &VMonoColor, "shaders/Tank/MonoColorVert.spv", "shaders/Tank/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
 		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
-		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL,
-			VK_CULL_MODE_NONE, false);
+		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL,VK_CULL_MODE_NONE, false);
+
 		// Models, textures and Descriptors (values assigned to the uniforms)
 
 		// Create models
@@ -344,6 +358,7 @@ protected:
 		MHeliBody.init(this, &VMonoColor, "Models/HeliBody.obj", OBJ);
 		MHeliBladeFront.init(this, &VMonoColor, "Models/HeliBladeFront.obj", OBJ);
 		MHeliBladeBack.init(this, &VMonoColor, "Models/HeliBladeBack.obj", OBJ);
+		MCar.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
 		MFloor.vertices = 
 			//		POS			   UV
 		{     { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
@@ -362,6 +377,7 @@ protected:
 		THeliBody.init(this, "textures/Red.png");
 		THeliBladeFront.init(this, "textures/Red.png");
 		THeliBladeBack.init(this, "textures/Red.png");
+		TCar.init(this, "textures/Yellow.png");
 		TFloor.init(this, "textures/RisikoMap.png");
 
 		// Init local variables
@@ -411,6 +427,11 @@ protected:
 					{1, TEXTURE, 0, &THeliBladeBack}
 			});
 
+		DSCar.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &TCar}
+			});
+
 		DSFloor.init(this, &DSLVertexFloor, {
 					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 					{1, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
@@ -438,6 +459,7 @@ protected:
 		DSHeliBody.cleanup();
 		DSHeliBladeFront.cleanup();
 		DSHeliBladeBack.cleanup();
+		DSCar.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
 	}
@@ -453,6 +475,7 @@ protected:
 		THeliBody.cleanup();
 		THeliBladeFront.cleanup();
 		THeliBladeBack.cleanup();
+		TCar.cleanup();
 		TFloor.cleanup();
 
 		// Cleanup models
@@ -463,6 +486,7 @@ protected:
 		MHeliBody.cleanup();
 		MHeliBladeFront.cleanup();
 		MHeliBladeBack.cleanup();
+		MCar.cleanup();
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
@@ -529,6 +553,14 @@ protected:
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MHeliBladeBack.indices.size()), 1, 0, 0, 0);
 
+		// binds the mesh
+		MCar.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSCar.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCar.indices.size()), 1, 0, 0, 0);
+
 
 		// binds the pipeline
 		PVertexFloor.bind(commandBuffer);
@@ -557,9 +589,6 @@ protected:
 
 		// Function that contains all the logic of the game
 		Logic(Ar, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldHeli ,camPos);
-
-
-
 
 		// gubo values
 		gubo.DlightDir = glm::normalize(glm::vec3(1, 2, 3));
@@ -590,6 +619,13 @@ protected:
 		uboHeliFull.nMat = glm::inverse(glm::transpose(WorldHeli));
 		/* map the uniform data block to the GPU */
 		DSHeliFull.map(currentImage, &uboHeliFull, sizeof(uboHeliFull), 0);
+
+		uboCar.amb = 1.0f; uboCar.gamma = 180.0f; uboCar.sColor = glm::vec3(1.0f);
+		uboCar.mvpMat = ViewPrj * WorldCar;
+		uboCar.mMat = WorldCar;
+		uboCar.nMat = glm::inverse(glm::transpose(WorldCar));
+		/* map the uniform data block to the GPU */
+		DSCar.map(currentImage, &uboCar, sizeof(uboCar), 0);
 
 
 		uboFloor.mMat = glm::mat4(1);
@@ -714,7 +750,42 @@ protected:
 
 		case CAR:
 
+			// computing the movement versors 
+			ux = glm::vec3(glm::rotate(glm::mat4(1),
+				carYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
+			uz = glm::vec3(glm::rotate(glm::mat4(1),
+				carYaw,
+				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
+			if (!transition) {
+				// updating car position
+				carPosition += ux * TANK_MOVE_SPEED * m.z * deltaT;
+				carPosition += uz * TANK_MOVE_SPEED * m.z * deltaT;
+				// limiting pitch
+				camPitch = camPitch < vehicleMinPitch ? vehicleMinPitch :
+					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
+			}
+			else {
+				// TODO si potrebbe parametrizzare
+				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
+			}
+
+			// deadzone implementation
+			if (glm::length((carPosition - oldCarPos)) > DEADZONE) {
+				updatePos = true;
+			}
+			//TODO newPos e oldPos devono diventare oldTankPos e newOldPos idem per pitchnew e pitchold e yaw...
+			if (updatePos) {
+				newCarPos = (oldCarPos * exp(-LAMBDAMOV * deltaT)) + carPosition * (1 - exp(-LAMBDAMOV * deltaT));
+				oldCarPos = newCarPos;
+				if (glm::length((carPosition - oldCarPos)) < (DEADZONE / 50.0f)) {
+					updatePos = false;
+				}
+			}
+
+			if (m.z != 0 && m.x != 0)
+				carYaw -= m.z * m.x * CAR_ROT_SPEED * deltaT;
 
 			break;
 
@@ -730,10 +801,16 @@ protected:
 			uy = glm::vec3(0, 1, 0);
 
 			if (!transition) {
-				// updating heli position
-				heliPosition += ux * HELI_MOVE_SPEED * m.x * deltaT;
-				heliPosition += uz * HELI_MOVE_SPEED * m.z * deltaT;
+				// updating heli position and inclination only if it is high enough
+				if (heliPosition.y > 2 * HELI_GROUND) {
+					heliPosition += ux * HELI_MOVE_SPEED * m.x * deltaT;
+					heliPosition += uz * HELI_MOVE_SPEED * m.z * deltaT;
 
+					// updating heli inclination
+					heliRoll -= m.z * 0.5f * deltaT;
+					heliPitch -= (-m.x) * 0.5f * deltaT;
+				}
+				
 				// blocking the helicopter from going under the terrain
 				if ((heliPosition + uy * HELI_VERT_SPEED * m.y * deltaT).y < HELI_GROUND) {
 					heliPosition.y = HELI_GROUND;
@@ -748,10 +825,7 @@ protected:
 					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
 				heliYaw = camYaw + glm::radians(90.0f);
 
-				// updating heli inclination
-				heliRoll -= m.z * 0.5f * deltaT;
-				heliPitch -= (-m.x) * 0.5f * deltaT;
-
+				
 				// limiting the inclination
 				if (heliRoll < -0.2f)
 					heliRoll = -0.2f;
@@ -817,7 +891,11 @@ protected:
 		WorldTank = tempWorld;
 		
 		// Car World Matrix
-
+		tempWorld =
+			glm::translate(glm::mat4(1), carPosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw + glm::radians(45.0f), 0))) *
+			glm::scale(glm::mat4(1), glm::vec3(1));
+		WorldCar = tempWorld;
 
 		// Heli World Matrix
 		tempWorld =
@@ -836,10 +914,15 @@ protected:
 
 			ViewPrj = MakeViewProjectionMatrix(Ar, camYaw, camPitch, camRoll, playerPosition);
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_T)) {
+			if (!transition && glfwGetKey(window, GLFW_KEY_1)) {
 				transition = true;
 				gameState = GameState::TANK;
 				camYaw = tankYaw - glm::radians(45.0f);
+			}
+			if (!transition && glfwGetKey(window, GLFW_KEY_3)) {
+				transition = true;
+				gameState = GameState::CAR;
+				camYaw = carYaw - glm::radians(45.0f);
 			}
 			if (!transition && glfwGetKey(window, GLFW_KEY_5)) {
 				transition = true;
@@ -869,7 +952,7 @@ protected:
 
 			ViewPrj = ProjectionMatrix * ViewMatrix;
 
-			if (!transition && glfwGetKey(window, GLFW_KEY_Y)) {
+			if (!transition && glfwGetKey(window, GLFW_KEY_2)) {
 				transition = true;
 				gameState = GameState::WALK;
 				camYaw = tankYaw - glm::radians(45.0f);
@@ -884,8 +967,35 @@ protected:
 			break;
 		case CAR:
 
-			if (glfwGetKey(window, GLFW_KEY_Y)) {
+			// World Matrix used for the camera
+			tempWorld = glm::translate(glm::mat4(1), oldCarPos) *
+				glm::mat4(glm::quat(glm::vec3(0, camYawNew, 0))) *
+				glm::scale(glm::mat4(1), glm::vec3(1));
+
+			// calculating the View-Projection Matrix
+			temp = tempWorld * glm::vec4(0, carCamHeight + (carCamDist * sin(camPitchNew)), carCamDist * cos(camPitchNew), 1);
+			camPos = glm::vec3(temp.x, temp.y, temp.z);
+
+
+			targetPointedPosition = glm::vec3(newCarPos.x, newCarPos.y + carCamHeight, newCarPos.z);
+
+			ViewMatrix = glm::lookAt(camPos, targetPointedPosition, glm::vec3(0, 1, 0));
+			ViewMatrix = glm::rotate(glm::mat4(1), camRoll, glm::vec3(0, 0, 1)) * ViewMatrix;
+
+			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+			ProjectionMatrix[1][1] *= -1;
+
+			ViewPrj = ProjectionMatrix * ViewMatrix;
+
+			if (!transition && glfwGetKey(window, GLFW_KEY_4)) {
+				transition = true;
 				gameState = GameState::WALK;
+				camYaw = carYaw - glm::radians(45.0f);
+				camPitch = 0.0f;
+				playerPosition = carPosition;
+				playerPosition.y = PLAYER_HEIGHT;
+				playerPosition.x += 3 * sin(carYaw);
+				playerPosition.z += 3 * cos(carYaw);
 
 			}
 
@@ -915,7 +1025,7 @@ protected:
 			if (!transition && glfwGetKey(window, GLFW_KEY_6)) {
 				transition = true;	
 				gameState = GameState::WALK;
-				camYaw = heliYaw - glm::radians(45.0f);
+				camYaw = heliYaw - glm::radians(90.0f);
 				camPitch = 0.0f;
 				playerPosition = heliPosition;
 				playerPosition.y = PLAYER_HEIGHT;
@@ -963,6 +1073,7 @@ protected:
 		return ViewProjectionMatrix;
 	}
 
+	// Sets the three floats to the value of the last one
 	void SetPitches(float* pa, float* pb, float* pc, float value) {
 		*pa = value;
 		*pb = value;
