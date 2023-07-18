@@ -239,7 +239,7 @@ protected:
 	const float HELI_VERT_SPEED = 5.0f;
 	const float HELI_DAMP_ANGLE = glm::radians(10.0f);
 	const float HELI_DAMP_SPEED = 1.2f;
-	const float HELI_BLADE_SPEED = 15.0f;
+	const float HELI_BLADE_SPEED = 10.0f;
 	glm::vec3 heliMoveSpeed = glm::vec3(0.0f);
 
 	// Parameters needed in the damping implementation - 3rd person view
@@ -1039,6 +1039,7 @@ protected:
 
 			// update the blade's rotation
 			heliTopBladeYaw += HELI_BLADE_SPEED * deltaT;
+			if (heliTopBladeYaw > 2 * M_PI) heliTopBladeYaw -= 2 * M_PI;
 			
 			break;
 		default:
@@ -1094,18 +1095,45 @@ protected:
 		// Heli World Matrix
 		tempWorld =
 			glm::translate(glm::mat4(1), heliPosition) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, heliYaw, 0.0f))) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
-			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
+			glm::mat4(
+				glm::quat(glm::vec3(0.0f, heliYaw, 0.0f)) *
+				glm::quat(glm::vec3(0.0f, 0.0f, heliRoll)) *
+				glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(1.0f));
 		WorldHeli = tempWorld;
 		// Top Blade World Matrix
 		tempWorld =
-			glm::translate(glm::mat4(1), heliPosition) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, heliTopBladeYaw, 0.0f))) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
-			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
-			glm::scale(glm::mat4(1), glm::vec3(1.0f));
+			glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z)) *
+			glm::mat4(
+				glm::quat(glm::vec3(0.0f, heliYaw - glm::radians(90.0f), 0.0f)) *
+				glm::quat(glm::vec3(0.0f, 0.0f, -heliPitch)) *
+				glm::quat(glm::vec3(heliRoll, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.925f));
+
+		// ROLL : W/S
+		// PITCH : A/D
+		glm::mat4 Rz = glm::rotate(glm::mat4(1), -heliPitch, glm::vec3(0, 0, 1));
+		glm::mat4 Rx = glm::rotate(glm::mat4(1), heliRoll, glm::vec3(1, 0, 0));
+		glm::mat4 Ry = glm::rotate(glm::mat4(1), heliYaw - glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glm::mat4 Tr = glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z));
+		glm::mat4 yawRotation = glm::rotate(glm::mat4(1), heliTopBladeYaw, glm::vec3(0, 1, 0));
+		glm::mat4 Tdd =
+			glm::translate(glm::mat4(1),
+				glm::vec3( (1.25f * (sin(heliPitch))),0.0f,(1.25f * (sin(heliRoll)))));
+
+		tempWorld =
+			Tr *
+			Ry *
+			Tdd *
+			Rz *
+			Rx *
+			yawRotation *
+			glm::inverse(Rx) *
+			glm::inverse(Rz) *
+			glm::inverse(Ry) *
+			glm::inverse(Tr) *
+			tempWorld;
+
 		WorldHeliTopBlade = tempWorld;
 		// Back Blade World Matrix
 		tempWorld =
