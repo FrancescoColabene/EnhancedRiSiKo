@@ -105,8 +105,8 @@ protected:
 	Model<VertexMonoColor> MTank;
 	Model<VertexMonoColor> MHeliFull;
 	Model<VertexMonoColor> MHeliBody;
-	Model<VertexMonoColor> MHeliBladeFront;
-	Model<VertexMonoColor> MHeliBladeBack;
+	Model<VertexMonoColor> MHeliTopBlade;
+	Model<VertexMonoColor> MHeliBackBlade;
 	Model<VertexMonoColor> MCar;
 	Model<VertexMonoColor> MFloor;
 
@@ -116,16 +116,16 @@ protected:
 	DescriptorSet DSTank;
 	DescriptorSet DSHeliFull;
 	DescriptorSet DSHeliBody;
-	DescriptorSet DSHeliBladeFront;
-	DescriptorSet DSHeliBladeBack;
+	DescriptorSet DSHeliTopBlade;
+	DescriptorSet DSHeliBackBlade;
 	DescriptorSet DSCar;
 	DescriptorSet DSFloor;
 
 	Texture TTank;
 	Texture THeliFull;
 	Texture THeliBody;
-	Texture THeliBladeFront;
-	Texture THeliBladeBack;
+	Texture THeliTopBlade;
+	Texture THeliBackBlade;
 	Texture TCar;
 	Texture TFloor;
 
@@ -135,8 +135,8 @@ protected:
 	MeshUniformBlock uboTank;
 	MeshUniformBlock uboHeliFull;
 	MeshUniformBlock uboHeliBody;
-	MeshUniformBlock uboHeliBladeFront;
-	MeshUniformBlock uboHeliBladeBack;
+	MeshUniformBlock uboHeliTopBlade;
+	MeshUniformBlock uboHeliBackBlade;
 	MeshUniformBlock uboCar;
 
 	UniformBufferObject uboFloor;
@@ -211,6 +211,9 @@ protected:
 	// Interaction range to ride vehicles
 	const float INTERACTION_RANGE = 4.0f;
 
+	// Gravity force for player/heli
+	const float GRAVITY = 6.0f;
+
 	// Rotation speed of the camera, rotation speed of the vehicles and their movement speed
 	const float CAM_ROT_SPEED = glm::radians(120.0f);
 	const float CAM_HELI_SPEED = glm::radians(60.0f);
@@ -234,7 +237,9 @@ protected:
 	const float HELI_DEC_SPEED = 10.0f;
 	const float HELI_MAX_SPEED = 10.0f;
 	const float HELI_VERT_SPEED = 5.0f;
-	const float HELI_DAMP_SPEED = glm::radians(10.0f);
+	const float HELI_DAMP_ANGLE = glm::radians(10.0f);
+	const float HELI_DAMP_SPEED = 1.2f;
+	const float HELI_BLADE_SPEED = 15.0f;
 	glm::vec3 heliMoveSpeed = glm::vec3(0.0f);
 
 	// Parameters needed in the damping implementation - 3rd person view
@@ -252,7 +257,7 @@ protected:
 		tankYaw = glm::radians(45.0f),
 		// heli angles
 		heliYaw = glm::radians(90.0f), heliRoll = 0.0f, heliPitch = 0.0f,
-		tempHeliYaw = 0.0f,
+		tempHeliYaw = 0.0f, heliTopBladeYaw = 0.0f, heliBackBladeRoll = 0.0f,
 		// car angles
 		carYaw = glm::radians(45.0f);
 
@@ -376,8 +381,8 @@ protected:
 		MTank.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
 		MHeliFull.init(this, &VMonoColor, "Models/HeliFull.obj", OBJ);
 		MHeliBody.init(this, &VMonoColor, "Models/HeliBody.obj", OBJ);
-		MHeliBladeFront.init(this, &VMonoColor, "Models/HeliBladeFront.obj", OBJ);
-		MHeliBladeBack.init(this, &VMonoColor, "Models/HeliBladeBack.obj", OBJ);
+		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);
+		MHeliBackBlade.init(this, &VMonoColor, "Models/HeliBackBlade.obj", OBJ);
 		MCar.init(this, &VMonoColor, "Models/Jeep.obj", OBJ);
 		MFloor.vertices =
 			//		POS			   UV
@@ -395,8 +400,8 @@ protected:
 		TTank.init(this, "textures/Red.png");
 		THeliFull.init(this, "textures/Red.png");
 		THeliBody.init(this, "textures/Red.png");
-		THeliBladeFront.init(this, "textures/Red.png");
-		THeliBladeBack.init(this, "textures/Red.png");
+		THeliTopBlade.init(this, "textures/Red.png");
+		THeliBackBlade.init(this, "textures/Red.png");
 		TCar.init(this, "textures/Yellow.png");
 		TFloor.init(this, "textures/RisikoMap.png");
 
@@ -437,14 +442,14 @@ protected:
 					{1, TEXTURE, 0, &THeliBody}
 			});
 
-		DSHeliBladeFront.init(this, &DSLMonoColor, {
+		DSHeliTopBlade.init(this, &DSLMonoColor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
-					{1, TEXTURE, 0, &THeliBladeFront}
+					{1, TEXTURE, 0, &THeliTopBlade}
 			});
 
-		DSHeliBladeBack.init(this, &DSLMonoColor, {
+		DSHeliBackBlade.init(this, &DSLMonoColor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
-					{1, TEXTURE, 0, &THeliBladeBack}
+					{1, TEXTURE, 0, &THeliBackBlade}
 			});
 
 		DSCar.init(this, &DSLMonoColor, {
@@ -477,8 +482,8 @@ protected:
 		DSTank.cleanup();
 		DSHeliFull.cleanup();
 		DSHeliBody.cleanup();
-		DSHeliBladeFront.cleanup();
-		DSHeliBladeBack.cleanup();
+		DSHeliTopBlade.cleanup();
+		DSHeliBackBlade.cleanup();
 		DSCar.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
@@ -493,8 +498,8 @@ protected:
 		TTank.cleanup();
 		THeliFull.cleanup();
 		THeliBody.cleanup();
-		THeliBladeFront.cleanup();
-		THeliBladeBack.cleanup();
+		THeliTopBlade.cleanup();
+		THeliBackBlade.cleanup();
 		TCar.cleanup();
 		TFloor.cleanup();
 
@@ -504,8 +509,8 @@ protected:
 		MTank.cleanup();
 		MHeliFull.cleanup();
 		MHeliBody.cleanup();
-		MHeliBladeFront.cleanup();
-		MHeliBladeBack.cleanup();
+		MHeliTopBlade.cleanup();
+		MHeliBackBlade.cleanup();
 		MCar.cleanup();
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
@@ -558,20 +563,20 @@ protected:
 			static_cast<uint32_t>(MHeliBody.indices.size()), 1, 0, 0, 0);
 
 		// binds the mesh
-		MHeliBladeFront.bind(commandBuffer);
+		MHeliTopBlade.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSHeliBladeFront.bind(commandBuffer, PMonoColor, 1, currentImage);
+		DSHeliTopBlade.bind(commandBuffer, PMonoColor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MHeliBladeFront.indices.size()), 1, 0, 0, 0);
+			static_cast<uint32_t>(MHeliTopBlade.indices.size()), 1, 0, 0, 0);
 
 		// binds the mesh
-		MHeliBladeBack.bind(commandBuffer);
+		MHeliBackBlade.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSHeliBladeBack.bind(commandBuffer, PMonoColor, 1, currentImage);
+		DSHeliBackBlade.bind(commandBuffer, PMonoColor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MHeliBladeBack.indices.size()), 1, 0, 0, 0);
+			static_cast<uint32_t>(MHeliBackBlade.indices.size()), 1, 0, 0, 0);
 
 		// binds the mesh
 		MCar.bind(commandBuffer);
@@ -605,10 +610,10 @@ protected:
 
 		glm::vec3 camPos;
 		glm::mat4 ViewPrj;
-		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldHeli;
+		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
 
 		// Function that contains all the logic of the game
-		Logic(Ar, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldHeli, camPos);
+		Logic(Ar, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade, camPos);
 
 		// gubo values
 		gubo.DlightDir = glm::normalize(glm::vec3(1, 2, 3));
@@ -633,19 +638,33 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
 
-		uboHeliFull.amb = 1.0f; uboHeliFull.gamma = 180.0f; uboHeliFull.sColor = glm::vec3(1.0f);
-		uboHeliFull.mvpMat = ViewPrj * WorldHeli;
-		uboHeliFull.mMat = WorldHeli;
-		uboHeliFull.nMat = glm::inverse(glm::transpose(WorldHeli));
-		/* map the uniform data block to the GPU */
-		DSHeliFull.map(currentImage, &uboHeliFull, sizeof(uboHeliFull), 0);
-
 		uboCar.amb = 1.0f; uboCar.gamma = 180.0f; uboCar.sColor = glm::vec3(1.0f);
 		uboCar.mvpMat = ViewPrj * WorldCar;
 		uboCar.mMat = WorldCar;
 		uboCar.nMat = glm::inverse(glm::transpose(WorldCar));
 		/* map the uniform data block to the GPU */
 		DSCar.map(currentImage, &uboCar, sizeof(uboCar), 0);
+
+		uboHeliBody.amb = 1.0f; uboHeliBody.gamma = 180.0f; uboHeliBody.sColor = glm::vec3(1.0f);
+		uboHeliBody.mvpMat = ViewPrj * WorldHeli;
+		uboHeliBody.mMat = WorldHeli;
+		uboHeliBody.nMat = glm::inverse(glm::transpose(WorldHeli));
+		/* map the uniform data block to the GPU */
+		DSHeliBody.map(currentImage, &uboHeliBody, sizeof(uboHeliBody), 0);
+
+		uboHeliTopBlade.amb = 1.0f; uboHeliTopBlade.gamma = 180.0f; uboHeliTopBlade.sColor = glm::vec3(1.0f);
+		uboHeliTopBlade.mvpMat = ViewPrj * WorldHeliTopBlade;
+		uboHeliTopBlade.mMat = WorldHeliTopBlade;
+		uboHeliTopBlade.nMat = glm::inverse(glm::transpose(WorldHeliTopBlade));
+		/* map the uniform data block to the GPU */
+		DSHeliTopBlade.map(currentImage, &uboHeliTopBlade, sizeof(uboHeliTopBlade), 0);
+
+		uboHeliBackBlade.amb = 1.0f; uboHeliBackBlade.gamma = 180.0f; uboHeliBackBlade.sColor = glm::vec3(1.0f);
+		uboHeliBackBlade.mvpMat = ViewPrj * WorldHeliBackBlade;
+		uboHeliBackBlade.mMat = WorldHeli;
+		uboHeliBackBlade.nMat = glm::inverse(glm::transpose(WorldHeli));
+		/* map the uniform data block to the GPU */
+		DSHeliBackBlade.map(currentImage, &uboHeliBackBlade, sizeof(uboHeliBackBlade), 0);
 
 
 		uboFloor.mMat = glm::mat4(1);
@@ -655,7 +674,8 @@ protected:
 
 	}
 
-	void Logic(float Ar, glm::mat4& ViewPrj, glm::mat4& WorldPlayer, glm::mat4& WorldTank, glm::mat4& WorldCar, glm::mat4& WorldHeli, glm::vec3& camPos) {
+	void Logic(float Ar, glm::mat4& ViewPrj, glm::mat4& WorldPlayer, glm::mat4& WorldTank, glm::mat4& WorldCar, 
+				glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, glm::mat4& WorldHeliBackBlade ,glm::vec3& camPos) {
 
 		// Integration with the timers and the controllers
 			// returns:
@@ -687,14 +707,13 @@ protected:
 
 		// LOGIC OF THE APPLICATION
 
-		// TODO capire come gestire gli angoli che superano 2pi CONSIDERANDO il damping!
 		// computing camera angles (except pitch) when not transitioning
 		if (!transition) {
-			float speed = 0.0f;
-			if (gameState == GameState::HELI)
+			float speed = CAM_ROT_SPEED;
+			/*if (gameState == GameState::HELI)
 				speed = CAM_HELI_SPEED;
 			else
-				speed = CAM_ROT_SPEED;
+				speed = CAM_ROT_SPEED;*/
 
 			camYaw -= speed * r.y * deltaT;
 			camRoll += speed * r.z * deltaT;
@@ -703,10 +722,20 @@ protected:
 			if (camYaw > 2 * M_PI) {
 				camYaw -= 2 * M_PI;
 				camYawOld -= 2 * M_PI;
+				// if we're on the helicopter, we have to update its yaw too, otherwise it will spin
+				if (gameState == GameState::HELI) {
+					heliYaw -= 2 * M_PI;
+					tempHeliYaw -= 2 * M_PI;
+				}
 			}
-			if (camYaw < - 2 * M_PI) {
+			if (camYaw < -2 * M_PI) {
 				camYaw += 2 * M_PI;
 				camYawOld += 2 * M_PI;
+				// if we're on the helicopter, we have to update its yaw too, otherwise it will spin
+				if (gameState == GameState::HELI) {
+					heliYaw += 2 * M_PI;
+					tempHeliYaw += 2 * M_PI;
+				}
 			}
 			// TODO forse il pitch si può gestire in modo migliore. Ora updato qua (sempre uguale) e poi limito in base al mezzo
 		}
@@ -719,6 +748,7 @@ protected:
 		glm::vec3 ux, uy, uz;
 		// used by heli
 		static bool damp = false;
+		static float verticalVel = 0.0f;
 
 		switch (gameState)
 		{
@@ -740,6 +770,16 @@ protected:
 				// limiting pitch
 				camPitch = camPitch < playerMinPitch ? playerMinPitch :
 					(camPitch > playerMaxPitch ? playerMaxPitch : camPitch);
+			}
+
+			// make the player fall if it's higher than the ground
+			if (playerPosition.y > PLAYER_HEIGHT) {
+				verticalVel += GRAVITY * deltaT;
+				playerPosition.y -= verticalVel * deltaT;
+				if (playerPosition.y < PLAYER_HEIGHT) {
+					playerPosition.y = PLAYER_HEIGHT;
+					verticalVel = 0.0f;
+				}
 			}
 
 			break;
@@ -867,7 +907,7 @@ protected:
 			break;
 
 		case HELI:
-			
+
 			// computing the movement versors for the heli
 			// we use camYaw because the movement of the heli depends on the camera
 			ux = glm::vec3(glm::rotate(glm::mat4(1),
@@ -877,11 +917,11 @@ protected:
 				camYaw,
 				glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 			uy = glm::vec3(0, 1, 0);
-			
+
 			// Update the heli's position only if the camera is not transitioning
 			if (!transition) {
 				// updating heli position and inclination only if it is high enough
-				if (heliPosition.y > 2 * HELI_GROUND) {
+				if (heliPosition.y >= 2 * HELI_GROUND) {
 
 					// If i'm not pressing any button, I should lose velocity till I stop moving
 					if (m.x == 0) {
@@ -910,7 +950,7 @@ protected:
 					heliMoveSpeed += glm::vec3(m.x * HELI_ACC_SPEED * deltaT, 0.0f, m.z * HELI_ACC_SPEED * deltaT);
 
 					// If the player is moving, reset the position to center
-					if (m.z != 0 || m.x != 0) 
+					if (m.z != 0 || m.x != 0)
 						damp = true;
 
 					// Maximum velocity and diagonal velocity
@@ -925,47 +965,50 @@ protected:
 					heliRoll -= m.z * 0.5f * deltaT;
 					heliPitch -= (-m.x) * 0.5f * deltaT;
 
+					// updating heli rotation - deadzone implementation for the yaw 
+					if (damp || abs(tempHeliYaw - (camYaw + glm::radians(90.0f))) > HELI_DAMP_ANGLE) {
+						tempHeliYaw = (heliYaw * exp(-HELI_DAMP_SPEED * deltaT)) +
+							(camYaw + glm::radians(90.0f)) * (1 - exp(-HELI_DAMP_SPEED * deltaT));
+						heliYaw = tempHeliYaw;
+						damp = true;
+						if (abs(tempHeliYaw - (camYaw + glm::radians(90.0f))) < glm::radians(0.1f))
+							damp = false;
+					}
+
 				}
 
-				// blocking the helicopter from going under the terrain
-				if ((heliPosition + uy * heliMoveSpeed.y * m.y * deltaT).y < HELI_GROUND) {
-					heliPosition.y = HELI_GROUND;
-					heliMoveSpeed.y = 0.0f;
-				}
-				else
-				{
-					if (m.y == 0) {
-						if (heliMoveSpeed.y < 0) {
-							heliMoveSpeed.y += HELI_DEC_SPEED * deltaT;
-							if (heliMoveSpeed.y > 0) heliMoveSpeed.y = 0;
-						}
-						else {
-							heliMoveSpeed.y -= HELI_DEC_SPEED * deltaT;
-							if (heliMoveSpeed.y < 0) heliMoveSpeed.y = 0;
-						}
+				// Updating heliMoveSpeed velocity
+				if (m.y == 0) {
+					if (heliMoveSpeed.y < 0) {
+						heliMoveSpeed.y += HELI_DEC_SPEED * deltaT;
+						if (heliMoveSpeed.y > 0) heliMoveSpeed.y = 0;
 					}
-					
-					heliMoveSpeed.y += m.y * HELI_ACC_SPEED * deltaT;
+					else {
+						heliMoveSpeed.y -= HELI_DEC_SPEED * deltaT;
+						if (heliMoveSpeed.y < 0) heliMoveSpeed.y = 0;
+					}
 				}
+
+				heliMoveSpeed.y += m.y * HELI_ACC_SPEED * deltaT;
 
 				// updating heli position 
 				heliPosition += uy * heliMoveSpeed.y * deltaT;
 
-
-
+				// blocking the helicopter from going under the terrain
+				if ((heliPosition).y < HELI_GROUND) {
+					heliPosition.y = HELI_GROUND;
+					heliMoveSpeed.y = 0.0f;
+				}
+				// blocking the helicopter from going lower than a certain height while moving (security reasons)
+				else if (heliPosition.y < 2 * HELI_GROUND && (abs(heliMoveSpeed.x) > 0 || abs(heliMoveSpeed.z) > 0))
+				{
+					heliPosition.y = 2 * HELI_GROUND;
+					heliMoveSpeed.y = 0.0f;
+				}
 
 				// updating pitch
 				camPitch = camPitch < vehicleMinPitch ? vehicleMinPitch :
 					(camPitch > vehicleMaxPitch ? vehicleMaxPitch : camPitch);
-				
-				// deadzone for the yaw 
-				if (damp || abs(tempHeliYaw - (camYaw + glm::radians(90.0f))) > HELI_DAMP_SPEED) {
-					tempHeliYaw = (heliYaw * exp(-1 * deltaT)) + (camYaw + glm::radians(90.0f)) * (1 - exp(-1 * deltaT));
-					heliYaw = tempHeliYaw;
-					damp = true;
-					if (abs(tempHeliYaw - (camYaw + glm::radians(90.0f))) < glm::radians(0.1f))
-						damp = false;
-				}
 
 				// limiting the inclination
 				if (heliRoll < -0.2f)
@@ -973,29 +1016,10 @@ protected:
 				else if (heliRoll > 0.2f)
 					heliRoll = 0.2f;
 
-				if (m.z == 0 && heliRoll < 0.01f) {
-					heliRoll -= -0.5f * deltaT;
-					if (heliRoll > 0) heliRoll = 0.0f;
-				}
-				else if (m.z == 0 && heliRoll > 0.01f) {
-					heliRoll -= 0.5f * deltaT;
-					if (heliRoll < 0) heliRoll = 0.0f;
-				}
-
 				if (heliPitch < -0.2f)
 					heliPitch = -0.2f;
 				else if (heliPitch > 0.2f)
 					heliPitch = 0.2f;
-
-				if (m.x == 0 && heliPitch < 0.01f) {
-					heliPitch -= -0.5f * deltaT;
-					if (heliPitch > 0) heliPitch = 0.0f;
-				}
-				else if (m.x == 0 && heliPitch > 0.01f) {
-					heliPitch -= 0.5f * deltaT;
-					if (heliPitch < 0) heliPitch = 0.0f;
-				}
-
 			}
 			else {
 				SetPitches(&camPitch, &camPitchOld, &camPitchNew, vehicleStandardPitch);
@@ -1013,7 +1037,9 @@ protected:
 				}
 			}
 
-
+			// update the blade's rotation
+			heliTopBladeYaw += HELI_BLADE_SPEED * deltaT;
+			
 			break;
 		default:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
@@ -1029,6 +1055,7 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(1.0f));
 		WorldTank = tempWorld;
 
+		
 		// Car World Matrix
 		tempWorld =
 			glm::translate(glm::mat4(1), carPosition) *
@@ -1036,6 +1063,34 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(0.775f));
 		WorldCar = tempWorld;
 
+
+		// helicopter back to normal inclination
+		if ((m.x == 0 || gameState != GameState::HELI) && heliPitch < 0.01f) {
+			heliPitch -= -0.5f * deltaT;
+			if (heliPitch > 0) heliPitch = 0.0f;
+		}
+		else if ((m.x == 0 || gameState != GameState::HELI) && heliPitch > 0.01f) {
+			heliPitch -= 0.5f * deltaT;
+			if (heliPitch < 0) heliPitch = 0.0f;
+		}
+		if ((m.z == 0 || gameState != GameState::HELI) && heliRoll < 0.01f) {
+			heliRoll -= -0.5f * deltaT;
+			if (heliRoll > 0) heliRoll = 0.0f;
+		}
+		else if ((m.z == 0 || gameState != GameState::HELI) && heliRoll > 0.01f) {
+			heliRoll -= 0.5f * deltaT;
+			if (heliRoll < 0) heliRoll = 0.0f;
+		}
+
+		// TODO FEELS LIKE A WORKAROUND - this should be part of the helicopter movement handling, but right now it's only
+		// working while in GameState::HELI. The heli should also return to the normal inclination when the player drops off.
+		// and it should be inserted somewhere here - again, feels like a patch instead of a good implementation 
+		// helicopter gravity
+		if (gameState != GameState::HELI && heliPosition.y > HELI_GROUND) {
+			heliMoveSpeed.y -= 2 * GRAVITY * deltaT;
+			heliPosition.y += heliMoveSpeed.y * deltaT;
+			if (heliPosition.y < HELI_GROUND) heliPosition.y = HELI_GROUND;
+		}
 		// Heli World Matrix
 		tempWorld =
 			glm::translate(glm::mat4(1), heliPosition) *
@@ -1044,14 +1099,33 @@ protected:
 			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(1.0f));
 		WorldHeli = tempWorld;
+		// Top Blade World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), heliPosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, heliTopBladeYaw, 0.0f))) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliRoll))) *
+			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(1.0f));
+		WorldHeliTopBlade = tempWorld;
+		// Back Blade World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), heliPosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, heliYaw, 0.0f))) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, heliBackBladeRoll))) *
+			glm::mat4(glm::quat(glm::vec3(heliPitch, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(1.0f));
+		WorldHeliBackBlade = tempWorld;
+
 
 		glm::vec4 tempCamPos; //TODO sistemare la posizione 
 		glm::vec3 targetPointedPosition;
+
+		static glm::mat4 prova = glm::mat4(0.0f);
 		switch (gameState)
 		{
 		case WALK:
 
-			ViewPrj = MakeViewProjectionMatrix(Ar, camYaw, camPitch, camRoll, playerPosition);
+			prova = MakeViewProjectionMatrix(Ar, camYaw, camPitch, camRoll, playerPosition);
 
 			break;
 		case TANK:
@@ -1074,7 +1148,7 @@ protected:
 			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
 			ProjectionMatrix[1][1] *= -1;
 
-			ViewPrj = ProjectionMatrix * ViewMatrix;
+			prova = ProjectionMatrix * ViewMatrix;
 
 			if (possoScendere && !transition && action) {
 				transition = true;
@@ -1109,7 +1183,7 @@ protected:
 			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
 			ProjectionMatrix[1][1] *= -1;
 
-			ViewPrj = ProjectionMatrix * ViewMatrix;
+			prova = ProjectionMatrix * ViewMatrix;
 
 			if (possoScendere && !transition && action) {
 				transition = true;
@@ -1120,7 +1194,7 @@ protected:
 				playerPosition.y = PLAYER_HEIGHT;
 				playerPosition.x += 3 * sin(carYaw);
 				playerPosition.z += 3 * cos(carYaw);
-				//carMoveSpeed = 0.0f;
+				carMoveSpeed = 0.0f;
 			}
 
 			break;
@@ -1144,7 +1218,7 @@ protected:
 			ProjectionMatrix = glm::perspective(FOVy, Ar, nearPlane, farPlane);
 			ProjectionMatrix[1][1] *= -1;
 
-			ViewPrj = ProjectionMatrix * ViewMatrix;
+			prova = ProjectionMatrix * ViewMatrix;
 
 			if (possoScendere && !transition && action) {
 				transition = true;
@@ -1152,7 +1226,8 @@ protected:
 				camYaw = heliYaw - glm::radians(90.0f);
 				camPitch = 0.0f;
 				playerPosition = heliPosition;
-				playerPosition.y = PLAYER_HEIGHT;
+				playerPosition.y -= HELI_GROUND;
+				if (playerPosition.y < PLAYER_HEIGHT) playerPosition.y = PLAYER_HEIGHT;
 				playerPosition.x += 3 * sin(heliYaw);
 				playerPosition.z += 3 * cos(heliYaw);
 				heliMoveSpeed = glm::vec3(0.0f);
@@ -1162,17 +1237,16 @@ protected:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
 		}
-
-		// si potrebbe parametrizzare
+		
 		if (transition) {
 			transitionTimer += deltaT;
-			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + ViewPrj * (1 - exp(-LAMBDATRANS * deltaT));
+			ViewPrj = (oldViewPrj * exp(-LAMBDATRANS * deltaT)) + prova * (1 - exp(-LAMBDATRANS * deltaT));
 			if (transitionTimer > TRANS_DURATION) {
 				transition = false;
 				transitionTimer = 0.0f;
-				
 			}
 		}
+		else ViewPrj = prova;
 		oldViewPrj = ViewPrj;
 
 		// If i'm not driving a vehicle, check for the closest one
@@ -1215,14 +1289,19 @@ protected:
 					case TANK:
 						gameState = GameState::TANK;
 						angle = tankYaw - glm::radians(45.0f);
+						oldTankPos = tankPosition;
 						break;
 					case CAR:
 						gameState = GameState::CAR;
 						angle = carYaw - glm::radians(45.0f);
+						oldCarPos = carPosition;
 						break;
 					case HELI:
 						gameState = GameState::HELI;
 						angle = heliYaw - glm::radians(90.0f);
+						// without this, the view-prj of the heli would be too late with the damping 
+						// if leaving the helicopter while in the air
+						oldHeliPos = heliPosition;
 						break;
 					default:
 						printf("\nC A S I N I   F R A\n");
@@ -1245,7 +1324,7 @@ protected:
 
 	// Return the closest object to the player
 	GameState ClosestObject() {
-		return  glm::length((playerPosition - tankPosition)) < glm::length((playerPosition - carPosition)) ?
+		return glm::length((playerPosition - tankPosition)) < glm::length((playerPosition - carPosition)) ?
 			(glm::length((playerPosition - tankPosition)) < glm::length((playerPosition - heliPosition)) ? GameState::TANK : GameState::HELI) :
 			(glm::length((playerPosition - carPosition)) < glm::length((playerPosition - heliPosition)) ? GameState::CAR : GameState::HELI);
 	}
