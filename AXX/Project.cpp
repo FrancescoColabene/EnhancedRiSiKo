@@ -101,15 +101,16 @@ protected:
 	// Please note that Model objects depends on the corresponding vertex structure
 	/* FinalProject */
 	/* Add the variable that will contain the model for the room */
-	Model<VertexMonoColor> MTank, MCar, MCarBackTires, MHeliFull, MHeliBody, MHeliTopBlade, MFloor;
+	Model<VertexMonoColor> MTank, MCar, MCarBackTires, MCarSingleTire, MHeliFull, MHeliBody, MHeliTopBlade, MFloor;
 
 
 	DescriptorSet DSGubo;
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
-	DescriptorSet DSTank, DSCar, DSCarBackTires, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSFloor;
+	DescriptorSet DSTank, DSCar, DSCarBackTires, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSFloor;
 
-	Texture TTank, TCar, TCarBackTires, THeliFull, THeliBody, THeliTopBlade, TFloor;
+
+	Texture TTank, TCar, TCarBackTires, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TFloor;
 
 	// C++ storage for uniform variables
 	/* FinalProject */
@@ -139,13 +140,13 @@ protected:
 	const float farPlane = 150.0f;
 
 	// Player starting point + initialization
-	const float PLAYER_HEIGHT = 1.4f;
+	const float PLAYER_HEIGHT = 1.7f;
 	const float HELI_GROUND = 1.68f; // 1.68f è l'altezza giusta dal pavimento
 	const float CAR_HEIGHT = 0.7f;
 
 	const glm::vec3 PlayerStartingPos = glm::vec3(0.0f, PLAYER_HEIGHT, 0.0f);
 	const glm::vec3 TankStartingPos = glm::vec3(-7.0f, 0.0f, -12.0f);
-	const glm::vec3 CarStartingPos = glm::vec3(0.0f, 1.2f, -12.0f);
+	const glm::vec3 CarStartingPos = glm::vec3(0.0f, 1.05f, -12.0f);
 	const glm::vec3 HeliStartingPos = glm::vec3(7.0f, HELI_GROUND, -12.0f);
 	glm::vec3
 		playerPosition = PlayerStartingPos,
@@ -171,8 +172,8 @@ protected:
 	const float tankCamHeight = 2.5f;
 	const float tankCamDist = 9.0f;
 	// Camera target height and distance for the car view
-	const float carCamHeight = 2.5f;
-	const float carCamDist = 9.0f;
+	const float carCamHeight = 2.0f;
+	const float carCamDist = 6.0f;
 	// Camera target height and distance for the heli view
 	const float heliCamHeight = 3.0f;
 	const float heliCamDist = 12.0f;
@@ -203,10 +204,11 @@ protected:
 	const float TANK_MAX_SPEED = 3.0f;
 	float tankMoveSpeed = 0.0f; // I don't need a vector because the tank can cannot move sideways
 
-	const float CAR_ACC_SPEED = 12.0f;
-	const float CAR_DEC_SPEED = 10.0f;
-	const float CAR_MAX_SPEED = 12.0f;
+	const float CAR_ACC_SPEED = 8.0f;
+	const float CAR_DEC_SPEED = 7.0f;
+	const float CAR_MAX_SPEED = 8.0f;
 	const float CAR_ROT_SPEED = glm::radians(20.0f);
+	const float CAR_SCALE = 0.775f;
 	float carMoveSpeed = 0.0f; // I don't need a vector because the car cannot move sideways
 
 	const float HELI_ACC_SPEED = 15.0f;
@@ -224,7 +226,8 @@ protected:
 	const float LAMBDAROT = 20.0f,
 		LAMBDAMOV = 5.0f,
 		DEADZONE = 1.0f,
-		LAMBDATRANS = 8.0f;
+		LAMBDATRANS = 8.0f,
+		LAMBDAANGLE = 10.0f;
 	
 	// queste molto probabilmente andrebbero messe sotto
 	// Angles and variables needed to implement damping - independet player rotation from the camera
@@ -255,9 +258,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 8; // prima era 9
-		texturesInPool = 7;
-		setsInPool = 8; // prima era 9
+		uniformBlocksInPool = 12; // prima era 9
+		texturesInPool = 9;
+		setsInPool = 12; // prima era 9
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -359,6 +362,7 @@ protected:
 		MTank.init(this, &VMonoColor, "Models/Tank.obj", OBJ);
 		MCar.init(this, &VMonoColor, "Models/Jeep.obj", OBJ);
 		MCarBackTires.init(this, &VMonoColor, "Models/JeepBackTires.obj", OBJ);
+		MCarSingleTire.init(this, &VMonoColor, "Models/JeepTire.obj", OBJ);
 		MHeliFull.init(this, &VMonoColor, "Models/HeliFull.obj", OBJ);
 		MHeliBody.init(this, &VMonoColor, "Models/HeliBodyBack.obj", OBJ);
 		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);	
@@ -378,6 +382,7 @@ protected:
 		TTank.init(this, "textures/Red.png");
 		TCar.init(this, "textures/Red.png");
 		TCarBackTires.init(this, "textures/Red.png");
+		TCarSingleTire.init(this, "textures/Red.png");
 		THeliFull.init(this, "textures/Red.png");
 		THeliBody.init(this, "textures/Red.png");
 		THeliTopBlade.init(this, "textures/Red.png");
@@ -419,6 +424,14 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
 					{1, TEXTURE, 0, &TCarBackTires}
 			});
+		DSCarLeftTire.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &TCarSingleTire}
+			});
+		DSCarRightTire.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &TCarSingleTire}
+			});
 
 		DSHeliFull.init(this, &DSLMonoColor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
@@ -457,11 +470,13 @@ protected:
 		/* FinalProject */
 		/* cleanup the dataset for the room */
 		DSTank.cleanup();
+		DSCar.cleanup();
+		DSCarBackTires.cleanup();
+		DSCarRightTire.cleanup();
+		DSCarLeftTire.cleanup();
 		DSHeliFull.cleanup();
 		DSHeliBody.cleanup();
 		DSHeliTopBlade.cleanup();
-		DSCarBackTires.cleanup();
-		DSCar.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
 	}
@@ -473,22 +488,25 @@ protected:
 	void localCleanup() {
 		// Cleanup textures
 		TTank.cleanup();
+		TCar.cleanup();
+		TCarBackTires.cleanup();
+		TCarSingleTire.cleanup();
 		THeliFull.cleanup();
 		THeliBody.cleanup();
 		THeliTopBlade.cleanup();
-		TCarBackTires.cleanup();
-		TCar.cleanup();
 		TFloor.cleanup();
 
 		// Cleanup models
 		/* FinalProject */
 		/* Cleanup the mesh for the room */
 		MTank.cleanup();
+		MCar.cleanup();
+		MCarBackTires.cleanup();
+		MCarSingleTire.cleanup();
 		MHeliFull.cleanup();
 		MHeliBody.cleanup();
 		MHeliTopBlade.cleanup();
-		MCarBackTires.cleanup();
-		MCar.cleanup();
+		
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
@@ -524,6 +542,34 @@ protected:
 			static_cast<uint32_t>(MTank.indices.size()), 1, 0, 0, 0);
 
 		// binds the mesh
+		MCar.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSCar.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCar.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MCarBackTires.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSCarBackTires.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCarBackTires.indices.size()), 1, 0, 0, 0);
+
+		// binds the mesh
+		MCarSingleTire.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSCarLeftTire.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCarSingleTire.indices.size()), 1, 0, 0, 0);
+		DSCarRightTire.bind(commandBuffer, PMonoColor, 1, currentImage);
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCarSingleTire.indices.size()), 1, 0, 0, 0);
+
+
+		// binds the mesh
 		MHeliFull.bind(commandBuffer);
 		// binds the descriptor set layout
 		DSHeliFull.bind(commandBuffer, PMonoColor, 1, currentImage);
@@ -547,21 +593,7 @@ protected:
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MHeliTopBlade.indices.size()), 1, 0, 0, 0);
 
-		// binds the mesh
-		MCarBackTires.bind(commandBuffer);
-		// binds the descriptor set layout
-		DSCarBackTires.bind(commandBuffer, PMonoColor, 1, currentImage);
-		// record the drawing command in the command buffer
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MCarBackTires.indices.size()), 1, 0, 0, 0);
-
-		// binds the mesh
-		MCar.bind(commandBuffer);
-		// binds the descriptor set layout
-		DSCar.bind(commandBuffer, PMonoColor, 1, currentImage);
-		// record the drawing command in the command buffer
-		vkCmdDrawIndexed(commandBuffer,
-			static_cast<uint32_t>(MCar.indices.size()), 1, 0, 0, 0);
+		
 
 
 		// binds the pipeline
@@ -642,6 +674,20 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSCarBackTires.map(currentImage, &uboBackTires, sizeof(uboBackTires), 0);
 
+		uboLeftTire.amb = 1.0f; uboLeftTire.gamma = 180.0f; uboLeftTire.sColor = glm::vec3(1.0f);
+		uboLeftTire.mvpMat = ViewPrj * WorldLeftTire;
+		uboLeftTire.mMat = WorldLeftTire;
+		uboLeftTire.nMat = glm::inverse(glm::transpose(WorldLeftTire));
+		/* map the uniform data block to the GPU */
+		DSCarLeftTire.map(currentImage, &uboLeftTire, sizeof(uboLeftTire), 0);
+
+		uboRightTire.amb = 1.0f; uboRightTire.gamma = 180.0f; uboRightTire.sColor = glm::vec3(1.0f);
+		uboRightTire.mvpMat = ViewPrj * WorldRightTire;
+		uboRightTire.mMat = WorldRightTire;
+		uboRightTire.nMat = glm::inverse(glm::transpose(WorldRightTire));
+		/* map the uniform data block to the GPU */
+		DSCarRightTire.map(currentImage, &uboRightTire, sizeof(uboRightTire), 0);
+
 
 		uboFloor.mMat = glm::mat4(1);
 		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
@@ -685,7 +731,9 @@ protected:
 
 
 		static bool updatePos = false;
-
+		static float tireRotation = 0.0f;
+		static float tireAngle = 0.0f;
+		float temp = 0.0f;
 
 		// LOGIC OF THE APPLICATION
 
@@ -879,7 +927,11 @@ protected:
 					updatePos = false;
 				}
 			}
+			temp = m.x * glm::radians(40.0f); // da definire
+			tireAngle = (tireAngle * exp(-LAMBDAANGLE * deltaT)) + temp * (1 - exp(-LAMBDAANGLE * deltaT));
 
+			tireRotation += carMoveSpeed * glm::radians(1.0f); // da definire
+			if (tireRotation > 2 * M_PI) tireRotation -= 2 * M_PI;
 
 			break;
 
@@ -1044,16 +1096,74 @@ protected:
 		tempWorld =
 			glm::translate(glm::mat4(1), carPosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw + glm::radians(45.0f), 0))) *
-			glm::scale(glm::mat4(1), glm::vec3(0.775f));
+			glm::scale(glm::mat4(1), glm::vec3(CAR_SCALE));
 		WorldCar = tempWorld;
 
-		glm::vec3 backTirePosition = carPosition + glm::vec3(0.0f, 0.2f, 2.5f);
-		// Back Tires World Matrix
+		glm::vec3 backTiresPosition = carPosition + glm::vec3(0.0f, 0.085f, 2.45f);
+		// Back Tires World Matrix - LA SCALA È ZERO
 		tempWorld =
-			glm::translate(glm::mat4(1), backTirePosition) *
+			glm::translate(glm::mat4(1), backTiresPosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw + glm::radians(45.0f), 0.0f))) *
-			glm::scale(glm::mat4(1), glm::vec3(1.0f));
+			glm::scale(glm::mat4(1), glm::vec3(0.0f));
 		WorldBackTires = tempWorld;
+
+		// TODO da spostare in alto insieme al resto
+		const glm::vec3 RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, -1.025f);
+		glm::vec3 rightTirePosition = carPosition + RIGHT_TIRE_OFFSET;
+		
+		// Front Right Tire World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), rightTirePosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.375f));
+
+		glm::mat4 RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
+		glm::mat4 TPosOffsetsC = glm::translate(glm::mat4(1), rightTirePosition);
+		glm::mat4 TPosC = glm::translate(glm::mat4(1), carPosition);
+		glm::mat4 TOffestsC = glm::translate(glm::mat4(1), RIGHT_TIRE_OFFSET);
+		glm::mat4 applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
+		glm::mat4 applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
+
+		tempWorld =
+			TPosC *
+			RyC *
+			TOffestsC *
+			applyAngle *
+			applyRotation *
+			glm::inverse(RyC) *
+			glm::inverse(TPosOffsetsC) *
+			tempWorld;
+
+		WorldRightTire = tempWorld;
+
+		const glm::vec3 LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, -1.025f);
+		glm::vec3 leftTirePosition = carPosition + LEFT_TIRE_OFFSET;
+
+		// Front Left Tire World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), leftTirePosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.375f));
+
+		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
+		TPosOffsetsC = glm::translate(glm::mat4(1), leftTirePosition);
+		TPosC = glm::translate(glm::mat4(1), carPosition);
+		TOffestsC = glm::translate(glm::mat4(1), LEFT_TIRE_OFFSET);
+		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
+		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
+
+		tempWorld =
+			TPosC *
+			RyC *
+			TOffestsC *
+			applyAngle *
+			applyRotation *
+			glm::inverse(RyC) *
+			glm::inverse(TPosOffsetsC) *
+			tempWorld;
+
+		WorldLeftTire = tempWorld;
+
 
 		// helicopter back to normal inclination
 		if ((m.x == 0 || gameState != GameState::HELI) && heliPitch < 0.01f) {
@@ -1102,19 +1212,19 @@ protected:
 				glm::quat(glm::vec3(heliRoll, 0.0f, 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(0.925f));
 
-		glm::mat4 Rz = glm::rotate(glm::mat4(1), -heliPitch, glm::vec3(0, 0, 1));
-		glm::mat4 Rx = glm::rotate(glm::mat4(1), heliRoll, glm::vec3(1, 0, 0));
-		glm::mat4 Ry = glm::rotate(glm::mat4(1), heliYaw - glm::radians(90.0f), glm::vec3(0, 1, 0));
-		glm::mat4 TPosOffsets = glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z));
-		glm::mat4 yawRotation = glm::rotate(glm::mat4(1), heliTopBladeYaw, glm::vec3(0, 1, 0));
+		glm::mat4 RzH = glm::rotate(glm::mat4(1), -heliPitch, glm::vec3(0, 0, 1));
+		glm::mat4 RxH = glm::rotate(glm::mat4(1), heliRoll, glm::vec3(1, 0, 0));
+		glm::mat4 RyH = glm::rotate(glm::mat4(1), heliYaw - glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glm::mat4 TPosOffsetsH = glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z));
+		glm::mat4 yawRotationH = glm::rotate(glm::mat4(1), heliTopBladeYaw, glm::vec3(0, 1, 0));
 		glm::mat4 Tdd = glm::translate(glm::mat4(1), glm::vec3( (1.25f * (sin(heliPitch))), 0.0f, (1.25f * (sin(heliRoll)))));
 
 		tempWorld =
-			TPosOffsets *
-			Ry * Tdd * Rz * Rx *
-			yawRotation *
-			glm::inverse(Rx) * glm::inverse(Rz) * glm::inverse(Ry) * 
-			glm::inverse(TPosOffsets) *
+			TPosOffsetsH *
+			RyH * Tdd * RzH * RxH *
+			yawRotationH *
+			glm::inverse(RxH) * glm::inverse(RzH) * glm::inverse(RyH) * 
+			glm::inverse(TPosOffsetsH) *
 			tempWorld;
 		WorldHeliTopBlade = tempWorld;
 
@@ -1134,7 +1244,6 @@ protected:
 			if (possoScendere && !transition && action) {
 				transition = true;
 				gameState = GameState::WALK;
-				camYaw = tankYaw - glm::radians(45.0f);
 				camPitch = 0.0f;
 				playerPosition = tankPosition;
 				playerPosition.y = PLAYER_HEIGHT;
@@ -1150,12 +1259,12 @@ protected:
 			if (possoScendere && !transition && action) {
 				transition = true;
 				gameState = GameState::WALK;
-				camYaw = carYaw - glm::radians(45.0f);
 				camPitch = 0.0f;
 				playerPosition = carPosition;
+				//playerPosition += glm::vec3(-2 * cos(carYaw), 0 , - 2 *cos(carYaw));
 				playerPosition.y = PLAYER_HEIGHT;
-				playerPosition.x += 3 * sin(carYaw);
-				playerPosition.z += 3 * cos(carYaw);
+				playerPosition.x += 2.2f * sin(carYaw + glm::radians(65.0f));
+				playerPosition.z += 2.2f * cos(carYaw + glm::radians(65.0f));
 				carMoveSpeed = 0.0f;
 			}
 
@@ -1166,7 +1275,6 @@ protected:
 			if (possoScendere && !transition && action) {
 				transition = true;
 				gameState = GameState::WALK;
-				camYaw = heliYaw - glm::radians(90.0f);
 				camPitch = 0.0f;
 				playerPosition = heliPosition;
 				playerPosition.y -= HELI_GROUND;
@@ -1222,34 +1330,29 @@ protected:
 				if (action) {
 					possoScendere = false;
 					transition = true;
-					float angle = 0.0f;
 					switch (tempClosest)
 					{
+						// without updating the oldPos, the view-prj too late with the damping 
+						// if the object moves after the player left it
 					case WALK:
 						printf("\nCASINI FRA\n");
 						break;
 					case TANK:
 						gameState = GameState::TANK;
-						angle = tankYaw - glm::radians(45.0f);
 						oldTankPos = tankPosition;
 						break;
 					case CAR:
 						gameState = GameState::CAR;
-						angle = carYaw - glm::radians(45.0f);
 						oldCarPos = carPosition;
 						break;
 					case HELI:
 						gameState = GameState::HELI;
-						angle = heliYaw - glm::radians(90.0f);
-						// without this, the view-prj of the heli would be too late with the damping 
-						// if leaving the helicopter while in the air
 						oldHeliPos = heliPosition;
 						break;
 					default:
 						printf("\nC A S I N I   F R A\n");
 						break;
 					}
-					camYaw = angle;
 				}
 			}
 
