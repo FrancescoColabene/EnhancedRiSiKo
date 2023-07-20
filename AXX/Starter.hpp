@@ -744,10 +744,13 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
 		 		&details.capabilities);
 
+		details.capabilities.minImageCount = 1;
+		details.capabilities.maxImageCount = 2;
+
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
 				nullptr);
-				
+		
 		if (formatCount != 0) {
 			details.formats.resize(formatCount);
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface,
