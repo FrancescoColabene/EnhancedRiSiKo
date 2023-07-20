@@ -53,13 +53,6 @@ enum GameState {
 	HELI
 };
 
-// The vertices data structures
-struct VertexMesh {
-	glm::vec3 pos;
-	glm::vec3 norm;
-	glm::vec2 UV;
-};
-
 /* FinalProject */
 /* Add the C++ datastructure for the required vertex format */
 struct VertexMonoColor {
@@ -101,13 +94,13 @@ protected:
 	// Please note that Model objects depends on the corresponding vertex structure
 	/* FinalProject */
 	/* Add the variable that will contain the model for the room */
-	Model<VertexMonoColor> MTank, MCar, MCarBackTires, MCarSingleTire, MHeliFull, MHeliBody, MHeliTopBlade, MFloor;
+	Model<VertexMonoColor> MTank, MCar, MCarBackTires, MCarSingleTire, MHeliFull, MHeliBody, MHeliTopBlade, MHeliBackBlade, MFloor;
 
 
 	DescriptorSet DSGubo;
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
-	DescriptorSet DSTank, DSCar, DSCarBackTires, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSFloor;
+	DescriptorSet DSTank, DSCar, DSCarBackTires, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSFloor;
 
 
 	Texture TTank, TCar, TCarBackTires, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TFloor;
@@ -115,7 +108,7 @@ protected:
 	// C++ storage for uniform variables
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
-	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackTires, uboLeftTire, uboRightTire, uboHeliFull, uboGlass;
+	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackTires, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
 
 	UniformBufferObject uboFloor;
 
@@ -258,9 +251,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 12; // prima era 9
-		texturesInPool = 9;
-		setsInPool = 12; // prima era 9
+		uniformBlocksInPool = 13; // prima era 9
+		texturesInPool = 10;
+		setsInPool = 13; // prima era 9
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -347,7 +340,7 @@ protected:
 		// be used in this pipeline. The first element will be set 0, and so on..
 		/* FinalProject */
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
-		PMonoColor.init(this, &VMonoColor, "shaders/Tank/MonoColorVert.spv", "shaders/Tank/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
+		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
 		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
 
@@ -364,8 +357,9 @@ protected:
 		MCarBackTires.init(this, &VMonoColor, "Models/JeepBackTires.obj", OBJ);
 		MCarSingleTire.init(this, &VMonoColor, "Models/JeepTire.obj", OBJ);
 		MHeliFull.init(this, &VMonoColor, "Models/HeliFull.obj", OBJ);
-		MHeliBody.init(this, &VMonoColor, "Models/HeliBodyBack.obj", OBJ);
-		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);	
+		MHeliBody.init(this, &VMonoColor, "Models/HeliBody.obj", OBJ);
+		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);
+		MHeliBackBlade.init(this, &VMonoColor, "Models/HeliBackBlade.obj", OBJ);
 		MFloor.vertices =
 			//		POS			   UV
 		{ { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
@@ -445,6 +439,10 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
 					{1, TEXTURE, 0, &THeliTopBlade}
 			});
+		DSHeliBackBlade.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &THeliTopBlade}
+			});
 
 		
 		DSFloor.init(this, &DSLVertexFloor, {
@@ -477,6 +475,7 @@ protected:
 		DSHeliFull.cleanup();
 		DSHeliBody.cleanup();
 		DSHeliTopBlade.cleanup();
+		DSHeliBackBlade.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
 	}
@@ -506,7 +505,8 @@ protected:
 		MHeliFull.cleanup();
 		MHeliBody.cleanup();
 		MHeliTopBlade.cleanup();
-		
+		MHeliBackBlade.cleanup();
+
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
@@ -592,7 +592,13 @@ protected:
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MHeliTopBlade.indices.size()), 1, 0, 0, 0);
-
+		// binds the mesh
+		MHeliBackBlade.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSHeliBackBlade.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MHeliBackBlade.indices.size()), 1, 0, 0, 0);
 		
 
 
@@ -619,15 +625,15 @@ protected:
 
 		glm::vec3 camPos;
 		glm::mat4 ViewPrj;
-		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade;
+		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
 
 		// Function that contains all the logic of the game
-		Logic(Ar, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, camPos);
+		Logic(Ar, camPos, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
 		// gubo values
 		gubo.DlightDir = glm::normalize(glm::vec3(1, 2, 3));
 		gubo.DlightColor = glm::vec4(0.5f, 0.5f, 0.5f, 0.5f);
-		gubo.AmbLightColor = glm::vec3(0.2f);
+		gubo.AmbLightColor = glm::vec3(0.4f);
 		gubo.eyePos = camPos;
 
 		// Writes value to the GPU
@@ -653,20 +659,6 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSCar.map(currentImage, &uboCar, sizeof(uboCar), 0);
 
-		uboHeliBody.amb = 1.0f; uboHeliBody.gamma = 180.0f; uboHeliBody.sColor = glm::vec3(1.0f);
-		uboHeliBody.mvpMat = ViewPrj * WorldHeli;
-		uboHeliBody.mMat = WorldHeli;
-		uboHeliBody.nMat = glm::inverse(glm::transpose(WorldHeli));
-		/* map the uniform data block to the GPU */
-		DSHeliBody.map(currentImage, &uboHeliBody, sizeof(uboHeliBody), 0);
-
-		uboHeliTopBlade.amb = 1.0f; uboHeliTopBlade.gamma = 180.0f; uboHeliTopBlade.sColor = glm::vec3(1.0f);
-		uboHeliTopBlade.mvpMat = ViewPrj * WorldHeliTopBlade;
-		uboHeliTopBlade.mMat = WorldHeliTopBlade;
-		uboHeliTopBlade.nMat = glm::inverse(glm::transpose(WorldHeliTopBlade));
-		/* map the uniform data block to the GPU */
-		DSHeliTopBlade.map(currentImage, &uboHeliTopBlade, sizeof(uboHeliTopBlade), 0);
-
 		uboBackTires.amb = 1.0f; uboBackTires.gamma = 180.0f; uboBackTires.sColor = glm::vec3(1.0f);
 		uboBackTires.mvpMat = ViewPrj * WorldBackTires;
 		uboBackTires.mMat = WorldBackTires;
@@ -688,6 +680,27 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSCarRightTire.map(currentImage, &uboRightTire, sizeof(uboRightTire), 0);
 
+		uboHeliBody.amb = 1.0f; uboHeliBody.gamma = 180.0f; uboHeliBody.sColor = glm::vec3(1.0f);
+		uboHeliBody.mvpMat = ViewPrj * WorldHeli;
+		uboHeliBody.mMat = WorldHeli;
+		uboHeliBody.nMat = glm::inverse(glm::transpose(WorldHeli));
+		/* map the uniform data block to the GPU */
+		DSHeliBody.map(currentImage, &uboHeliBody, sizeof(uboHeliBody), 0);
+
+		uboHeliTopBlade.amb = 1.0f; uboHeliTopBlade.gamma = 180.0f; uboHeliTopBlade.sColor = glm::vec3(1.0f);
+		uboHeliTopBlade.mvpMat = ViewPrj * WorldHeliTopBlade;
+		uboHeliTopBlade.mMat = WorldHeliTopBlade;
+		uboHeliTopBlade.nMat = glm::inverse(glm::transpose(WorldHeliTopBlade));
+		/* map the uniform data block to the GPU */
+		DSHeliTopBlade.map(currentImage, &uboHeliTopBlade, sizeof(uboHeliTopBlade), 0);
+
+		uboHeliBackBlades.amb = 1.0f; uboHeliBackBlades.gamma = 180.0f; uboHeliBackBlades.sColor = glm::vec3(1.0f);
+		uboHeliBackBlades.mvpMat = ViewPrj * WorldHeliBackBlade;
+		uboHeliBackBlades.mMat = WorldHeliBackBlade;
+		uboHeliBackBlades.nMat = glm::inverse(glm::transpose(WorldHeliBackBlade));
+		/* map the uniform data block to the GPU */
+		DSHeliBackBlade.map(currentImage, &uboHeliBackBlades, sizeof(uboHeliBackBlades), 0);
+
 
 		uboFloor.mMat = glm::mat4(1);
 		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
@@ -696,14 +709,15 @@ protected:
 
 	}
 
-	//Logic(Ar, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, camPos);
+	//Logic(Ar, camPos, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
-	void Logic(float Ar, glm::mat4& ViewPrj, 
+
+	void Logic(float Ar, glm::vec3& camPos,
+				glm::mat4& ViewPrj, 
 				glm::mat4& WorldPlayer,
 				glm::mat4& WorldTank,
 				glm::mat4& WorldCar, glm::mat4& WorldBackTires, glm::mat4& WorldLeftTire, glm::mat4& WorldRightTire, glm::mat4& WorldGlass,
-				glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, 
-				glm::vec3& camPos) {
+				glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, glm::mat4& WorldHeliBackBlade) {
 
 		// Integration with the timers and the controllers
 			// returns:
@@ -741,9 +755,10 @@ protected:
 		if (!transition) {
 
 			camYaw -= CAM_ROT_SPEED * r.y * deltaT;
-			camRoll += CAM_ROT_SPEED * r.z * deltaT;
+			//camRoll += CAM_ROT_SPEED * r.z * deltaT;
 			camPitch -= CAM_ROT_SPEED * r.x * deltaT;
 
+			// Limiting the yaw to a value between 2 * M_PI and 0
 			if (camYaw > 2 * M_PI) {
 				camYaw -= 2 * M_PI;
 				camYawOld -= 2 * M_PI;
@@ -773,6 +788,7 @@ protected:
 		glm::vec3 ux, uy, uz;
 		// used by heli
 		static bool damp = false;
+		// used for the player's gravity
 		static float verticalVel = 0.0f;
 
 		switch (gameState)
@@ -1099,12 +1115,13 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(CAR_SCALE));
 		WorldCar = tempWorld;
 
-		glm::vec3 backTiresPosition = carPosition + glm::vec3(0.0f, 0.085f, 2.45f);
+		const glm::vec3 BACK_TIRES_OFFSET = glm::vec3(0.0f, 0.0f, 2.25f);
+		glm::vec3 backTiresPosition = carPosition + BACK_TIRES_OFFSET;
 		// Back Tires World Matrix - LA SCALA È ZERO
 		tempWorld =
 			glm::translate(glm::mat4(1), backTiresPosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw + glm::radians(45.0f), 0.0f))) *
-			glm::scale(glm::mat4(1), glm::vec3(0.0f));
+			glm::scale(glm::mat4(1), glm::vec3(0.85f));
 		WorldBackTires = tempWorld;
 
 		// TODO da spostare in alto insieme al resto
@@ -1120,14 +1137,14 @@ protected:
 		glm::mat4 RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
 		glm::mat4 TPosOffsetsC = glm::translate(glm::mat4(1), rightTirePosition);
 		glm::mat4 TPosC = glm::translate(glm::mat4(1), carPosition);
-		glm::mat4 TOffestsC = glm::translate(glm::mat4(1), RIGHT_TIRE_OFFSET);
+		glm::mat4 TOffsetsC = glm::translate(glm::mat4(1), RIGHT_TIRE_OFFSET);
 		glm::mat4 applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
 		glm::mat4 applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
 
 		tempWorld =
 			TPosC *
 			RyC *
-			TOffestsC *
+			TOffsetsC *
 			applyAngle *
 			applyRotation *
 			glm::inverse(RyC) *
@@ -1148,14 +1165,14 @@ protected:
 		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
 		TPosOffsetsC = glm::translate(glm::mat4(1), leftTirePosition);
 		TPosC = glm::translate(glm::mat4(1), carPosition);
-		TOffestsC = glm::translate(glm::mat4(1), LEFT_TIRE_OFFSET);
+		TOffsetsC = glm::translate(glm::mat4(1), LEFT_TIRE_OFFSET);
 		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
 		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
 
 		tempWorld =
 			TPosC *
 			RyC *
-			TOffestsC *
+			TOffsetsC *
 			applyAngle *
 			applyRotation *
 			glm::inverse(RyC) *
@@ -1203,30 +1220,61 @@ protected:
 		WorldHeli = tempWorld;
 
 
+		const glm::vec3 TOP_BLADE_OFFSET = glm::vec3(0.0f, 1.25f, 0.0f);
 		// Top Blade World Matrix
 		tempWorld =
-			glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z)) *
-			glm::mat4(
-				glm::quat(glm::vec3(0.0f, heliYaw - glm::radians(90.0f), 0.0f)) *
-				glm::quat(glm::vec3(0.0f, 0.0f, -heliPitch)) *
-				glm::quat(glm::vec3(heliRoll, 0.0f, 0.0f))) *
+			glm::translate(glm::mat4(1), heliPosition + TOP_BLADE_OFFSET) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(0.925f));
 
 		glm::mat4 RzH = glm::rotate(glm::mat4(1), -heliPitch, glm::vec3(0, 0, 1));
 		glm::mat4 RxH = glm::rotate(glm::mat4(1), heliRoll, glm::vec3(1, 0, 0));
 		glm::mat4 RyH = glm::rotate(glm::mat4(1), heliYaw - glm::radians(90.0f), glm::vec3(0, 1, 0));
-		glm::mat4 TPosOffsetsH = glm::translate(glm::mat4(1), glm::vec3(heliPosition.x, heliPosition.y + 1.25f, heliPosition.z));
-		glm::mat4 yawRotationH = glm::rotate(glm::mat4(1), heliTopBladeYaw, glm::vec3(0, 1, 0));
-		glm::mat4 Tdd = glm::translate(glm::mat4(1), glm::vec3( (1.25f * (sin(heliPitch))), 0.0f, (1.25f * (sin(heliRoll)))));
+		glm::mat4 TPosOffsetsH = glm::translate(glm::mat4(1), heliPosition + TOP_BLADE_OFFSET);
+		glm::mat4 TPosH = glm::translate(glm::mat4(1), heliPosition);
+		glm::mat4 TOffsetsH = glm::translate(glm::mat4(1), TOP_BLADE_OFFSET);
+		glm::mat4 rotation = glm::rotate(glm::mat4(1), heliTopBladeYaw, glm::vec3(0, 1, 0));
 
 		tempWorld =
-			TPosOffsetsH *
-			RyH * Tdd * RzH * RxH *
-			yawRotationH *
-			glm::inverse(RxH) * glm::inverse(RzH) * glm::inverse(RyH) * 
+			TPosH *
+			RyH *
+			RxH *
+			RzH *
+			TOffsetsH *
+			rotation *
 			glm::inverse(TPosOffsetsH) *
 			tempWorld;
 		WorldHeliTopBlade = tempWorld;
+
+
+		const glm::vec3 BACK_BLADE_OFFSET = glm::vec3(0.175f, 1.075f, 5.425f);
+
+		// Back Blade World Matrix
+		tempWorld =
+			glm::translate(glm::mat4(1), heliPosition + BACK_BLADE_OFFSET) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(1.0f));
+
+		RzH = glm::rotate(glm::mat4(1), -heliPitch, glm::vec3(0, 0, 1));
+		RxH = glm::rotate(glm::mat4(1), heliRoll, glm::vec3(1, 0, 0));
+		RyH = glm::rotate(glm::mat4(1), heliYaw - glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glm::mat4 AdaptationMatrix = glm::rotate(glm::mat4(1), glm::radians(90.0f), glm::vec3(0, 1, 0));
+		TPosOffsetsH = glm::translate(glm::mat4(1), heliPosition + BACK_BLADE_OFFSET);
+		TPosH = glm::translate(glm::mat4(1), heliPosition);
+		TOffsetsH = glm::translate(glm::mat4(1), BACK_BLADE_OFFSET);
+		rotation = glm::rotate(glm::mat4(1), heliBackBladeRoll, glm::vec3(1, 0, 0));
+
+		tempWorld =
+			TPosH *
+			RyH *
+			RxH *
+			RzH *
+			TOffsetsH *
+			rotation *
+			glm::inverse(TPosOffsetsH) *
+			tempWorld * AdaptationMatrix;
+
+		WorldHeliBackBlade = tempWorld;
 
 		
 		glm::vec4 tempCamPos; //TODO sistemare la posizione 
