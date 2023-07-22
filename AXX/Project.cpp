@@ -39,13 +39,6 @@ struct UniformBufferObject {
 	alignas(16) glm::mat4 nMat;
 };
 
-struct GlobalUniformBufferObject {
-	alignas(16) glm::vec3 lightDir;
-	alignas(16) glm::vec4 lightColor;
-	alignas(16) glm::vec3 eyePos;
-};
-
-
 // Gamestate enum structure - it starts from 0
 enum GameState {
 	WALK,
@@ -54,6 +47,7 @@ enum GameState {
 	HELI
 };
 
+// Vertex format used by vehicles
 struct VertexMonoColor {
 	glm::vec3 pos;
 	glm::vec3 norm;
@@ -117,7 +111,7 @@ protected:
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackTires, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
 
-	UniformBufferObject uboFloor;
+	MeshUniformBlock uboFloor;
 
 	GlobalUniformBlock gubo;
 
@@ -283,15 +277,14 @@ protected:
 	void localInit() {
 		/* FinalProject */
 		/* Init the new Data Set Layout */
+		// BINDING 0: 
 		DSLVertexFloor.init(this, {
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
-					{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
-					{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
+					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
 			});
 
 		DSLMonoColor.init(this, {
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
 			});
 
 		DSLGubo.init(this, {
@@ -353,8 +346,10 @@ protected:
 		// be used in this pipeline. The first element will be set 0, and so on..
 		/* FinalProject */
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
+
+		// SET 0: DSLGubo, SET 1: DSLMonoColor
 		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
-		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
+		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLGubo, &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
@@ -374,8 +369,8 @@ protected:
 		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);
 		MHeliBackBlade.init(this, &VMonoColor, "Models/HeliBackBlade.obj", OBJ);
 		MFloor.vertices =
-			//		POS			   UV
-		{ { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
+			//			 POS			  NORM		UV
+		{	  { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
 			  { { 100.0f, 0.2f, 50.0f} , {0,1,0} , {1,1} } ,
 			  { {-100.0f, 0.2f,-50.0f} , {0,1,0} , {0,0} } ,
 			  { { 100.0f, 0.2f,-50.0f} , {0,1,0} , {1,0} } };
@@ -448,11 +443,9 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
 			});
 
-		
 		DSFloor.init(this, &DSLVertexFloor, {
-					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-					{1, UNIFORM, sizeof(GlobalUniformBufferObject), nullptr},
-					{2, TEXTURE, 0, &TFloor}
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{1, TEXTURE, 0, &TFloor}
 			});
 
 		DSGubo.init(this, &DSLGubo, {
@@ -611,7 +604,8 @@ protected:
 		// binds the mesh
 		MFloor.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSFloor.bind(commandBuffer, PVertexFloor, 0, currentImage);
+		DSGubo.bind(commandBuffer, PVertexFloor, 0, currentImage);
+		DSFloor.bind(commandBuffer, PVertexFloor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
@@ -707,7 +701,7 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSHeliBackBlade.map(currentImage, &uboHeliBackBlades, sizeof(uboHeliBackBlades), 0);
 
-
+		uboFloor.amb = 1.0f; uboFloor.gamma = 180.0f; uboFloor.color = ROJO; uboFloor.sColor = glm::vec3(1.0f);
 		uboFloor.mMat = glm::mat4(1);
 		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
 		uboFloor.nMat = glm::inverse(glm::transpose(uboFloor.mMat));
