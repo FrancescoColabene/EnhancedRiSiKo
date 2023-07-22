@@ -101,7 +101,7 @@ protected:
 	DescriptorSet DSGubo;
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
-	DescriptorSet DSTank, DSCar, DSCarBackTires, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSFloor;
+	DescriptorSet DSTank, DSCar, DSCarBackTires, DSCarBackLeftTire, DSCarBackRightTire, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSFloor;
 
 
 	Texture TTank, TCar, TCarBackTires, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TFloor;
@@ -109,7 +109,7 @@ protected:
 	// C++ storage for uniform variables
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
-	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackTires, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
+	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackTires, uboBackLeftTire, uboBackRightTire, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
 
 	MeshUniformBlock uboFloor;
 
@@ -209,6 +209,9 @@ protected:
 	const glm::vec3 BACK_TIRES_OFFSET = glm::vec3(0.0f, 0.0f, 2.25f); // TODO add left and right 
 	const glm::vec3 RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, -1.025f);
 	const glm::vec3 LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, -1.025f);
+	const glm::vec3 BACK_RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, 1.15f);
+	const glm::vec3 BACK_LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, 1.15f);
+
 	
 
 	const float HELI_ACC_SPEED = 15.0f;
@@ -260,9 +263,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 13; // prima era 9
-		texturesInPool = 11;
-		setsInPool = 13; // prima era 9
+		uniformBlocksInPool = 15; // prima era 9
+		texturesInPool = 13;
+		setsInPool = 15; // prima era 9
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -423,6 +426,12 @@ protected:
 		DSCarBackTires.init(this, &DSLMonoColor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
 			});
+		DSCarBackLeftTire.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+			});
+		DSCarBackRightTire.init(this, &DSLMonoColor, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+			});
 		DSCarLeftTire.init(this, &DSLMonoColor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
 			});
@@ -467,6 +476,8 @@ protected:
 		DSTank.cleanup();
 		DSCar.cleanup();
 		DSCarBackTires.cleanup();
+		DSCarBackLeftTire.cleanup();
+		DSCarBackRightTire.cleanup();
 		DSCarRightTire.cleanup();
 		DSCarLeftTire.cleanup();
 		DSHeliFull.cleanup();
@@ -554,9 +565,21 @@ protected:
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MCarBackTires.indices.size()), 1, 0, 0, 0);
 
+		
+
 		// binds the mesh
 		MCarSingleTire.bind(commandBuffer);
 		// binds the descriptor set layout
+		DSCarBackLeftTire.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCarSingleTire.indices.size()), 1, 0, 0, 0);
+
+		DSCarBackRightTire.bind(commandBuffer, PMonoColor, 1, currentImage);
+		// record the drawing command in the command buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MCarSingleTire.indices.size()), 1, 0, 0, 0);
+		
 		DSCarLeftTire.bind(commandBuffer, PMonoColor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
@@ -623,10 +646,10 @@ protected:
 
 		glm::vec3 camPos;
 		glm::mat4 ViewPrj;
-		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
+		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
 
 		// Function that contains all the logic of the game
-		Logic(Ar, camPos, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
+		Logic(Ar, camPos, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackTires, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
 		// gubo values
 		gubo.DlightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 4.0f));
@@ -665,6 +688,21 @@ protected:
 		uboBackTires.nMat = glm::inverse(glm::transpose(WorldBackTires));
 		/* map the uniform data block to the GPU */
 		DSCarBackTires.map(currentImage, &uboBackTires, sizeof(uboBackTires), 0);
+
+		uboBackLeftTire.amb = 1.0f; uboBackLeftTire.gamma = 180.0f; uboBackLeftTire.color = ROJO; uboBackLeftTire.sColor = glm::vec3(1.0f);
+		uboBackLeftTire.mvpMat = ViewPrj * WorldBackLeftTire;
+		uboBackLeftTire.mMat = WorldBackLeftTire;
+		uboBackLeftTire.nMat = glm::inverse(glm::transpose(WorldBackLeftTire));
+		/* map the uniform data block to the GPU */
+		DSCarBackLeftTire.map(currentImage, &uboBackLeftTire, sizeof(uboBackLeftTire), 0);
+
+		uboBackRightTire.amb = 1.0f; uboBackRightTire.gamma = 180.0f; uboBackRightTire.color = ROJO; uboBackRightTire.sColor = glm::vec3(1.0f);
+		uboBackRightTire.mvpMat = ViewPrj * WorldBackRightTire;
+		uboBackRightTire.mMat = WorldBackRightTire;
+		uboBackRightTire.nMat = glm::inverse(glm::transpose(WorldBackRightTire));
+		/* map the uniform data block to the GPU */
+		DSCarBackRightTire.map(currentImage, &uboBackRightTire, sizeof(uboBackRightTire), 0);
+
 
 		uboLeftTire.amb = 1.0f; uboLeftTire.gamma = 180.0f; uboLeftTire.color = ROJO; uboLeftTire.sColor = glm::vec3(1.0f);
 		uboLeftTire.mvpMat = ViewPrj * WorldLeftTire;
@@ -716,7 +754,7 @@ protected:
 				glm::mat4& ViewPrj, 
 				glm::mat4& WorldPlayer,
 				glm::mat4& WorldTank,
-				glm::mat4& WorldCar, glm::mat4& WorldBackTires, glm::mat4& WorldLeftTire, glm::mat4& WorldRightTire, glm::mat4& WorldGlass,
+				glm::mat4& WorldCar, glm::mat4& WorldBackTires, glm::mat4& WorldBackLeftTire, glm::mat4& WorldBackRightTire, glm::mat4& WorldLeftTire, glm::mat4& WorldRightTire, glm::mat4& WorldGlass,
 				glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, glm::mat4& WorldHeliBackBlade) {
 
 		// Integration with the timers and the controllers
@@ -1129,14 +1167,14 @@ protected:
 		WorldCar = tempWorld;
 
 		// Back Tires World Matrix - deve diventare left e right
-		glm::vec3 backTiresPosition = carPosition + BACK_TIRES_OFFSET;
+		/*glm::vec3 backTiresPosition = carPosition + BACK_TIRES_OFFSET;
 		
 		tempWorld =
 			glm::translate(glm::mat4(1), backTiresPosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw + glm::radians(45.0f), 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(0.85f));
 		WorldBackTires = tempWorld;
-
+		*/
 		
 		// Front Right Tire World Matrix
 		glm::vec3 rightTirePosition = carPosition + RIGHT_TIRE_OFFSET;
@@ -1192,6 +1230,57 @@ protected:
 
 		WorldLeftTire = tempWorld;
 
+		glm::vec3 backRightTirePosition = carPosition + BACK_RIGHT_TIRE_OFFSET;
+
+		tempWorld =
+ 	 		glm::translate(glm::mat4(1), backRightTirePosition) *
+		 	glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
+		 	glm::scale(glm::mat4(1), glm::vec3(0.375f));
+
+ 		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
+ 		TPosOffsetsC = glm::translate(glm::mat4(1), backRightTirePosition);
+ 		TPosC = glm::translate(glm::mat4(1), carPosition);
+ 		TOffsetsC = glm::translate(glm::mat4(1), BACK_RIGHT_TIRE_OFFSET);
+ 		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
+ 		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
+
+ 		tempWorld =
+ 			TPosC *
+ 			RyC *
+ 			TOffsetsC *
+ 			//applyAngle *
+ 			applyRotation *
+ 			glm::inverse(RyC) *
+ 			glm::inverse(TPosOffsetsC) *
+ 			tempWorld;
+
+ 		WorldBackRightTire = tempWorld;
+
+		glm::vec3 backLeftTirePosition = carPosition + BACK_LEFT_TIRE_OFFSET;
+
+		tempWorld =
+			glm::translate(glm::mat4(1), backLeftTirePosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.375f));
+
+		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
+		TPosOffsetsC = glm::translate(glm::mat4(1), backLeftTirePosition);
+		TPosC = glm::translate(glm::mat4(1), carPosition);
+		TOffsetsC = glm::translate(glm::mat4(1), BACK_LEFT_TIRE_OFFSET);
+		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
+		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
+
+		tempWorld =
+			TPosC *
+			RyC *
+			TOffsetsC *
+			//applyAngle *
+			applyRotation *
+			glm::inverse(RyC) *
+			glm::inverse(TPosOffsetsC) *
+			tempWorld;
+
+		WorldBackLeftTire = tempWorld;
 
 		// helicopter back to normal inclination
 		if ((m.x == 0 || gameState != GameState::HELI) && heliPitch < 0.01f) {
