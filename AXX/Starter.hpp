@@ -1797,7 +1797,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		double m_dy = ypos - old_ypos;
 		old_xpos = xpos; old_ypos = ypos;
 
-		const float MOUSE_RES = 1.0f;
+		const float MOUSE_RES = 2.0f;
 		// Setting sticky to true permits to register inputs even if they are pressed and released in a timespan that is shorter than a frame
 		glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 		
@@ -2056,12 +2056,12 @@ void Model<Vert>::loadModelOBJ(std::string file) {
 				*o = color;
 			}
 			
-			glm::vec2 texCoord = {
-				attrib.texcoords[2 * index.texcoord_index + 0],
-				1 - attrib.texcoords[2 * index.texcoord_index + 1] 
-			};
 			if(VD->UV.hasIt) {
 				glm::vec2 *o = (glm::vec2 *)((char*)(&vertex) + VD->UV.offset);
+				glm::vec2 texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1 - attrib.texcoords[2 * index.texcoord_index + 1]
+				};
 				*o = texCoord;
 			}
 

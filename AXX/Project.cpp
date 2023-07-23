@@ -76,6 +76,7 @@ protected:
 	/* Add the variable that will contain the required Descriptor Set Layout */
 	DescriptorSetLayout DSLMonoColor;
 	DescriptorSetLayout DSLVertexFloor;
+	DescriptorSetLayout DSLVertexMonument;
 
 	// Vertex formats
 
@@ -83,12 +84,15 @@ protected:
 	/* Add the variable that will contain the required Vertex format definition */
 	VertexDescriptor VMonoColor;
 	VertexDescriptor VVertexFloor;
+	VertexDescriptor VVertexMonument;
 
 	// Pipelines [Shader couples]
 	/* FinalProject */
 	/* Add the variable that will contain the new pipeline */
 	Pipeline PMonoColor;
 	Pipeline PVertexFloor;
+	Pipeline PPagoda;
+	Pipeline PEiffel;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	// Please note that Model objects depends on the corresponding vertex structure
@@ -96,12 +100,14 @@ protected:
 	/* Add the variable that will contain the model for the room */
 	Model<VertexMonoColor> MTank, MCar, MCarSingleTire, MHeliFull, MHeliBody, MHeliTopBlade, MHeliBackBlade;
 	Model<VertexFloor> MFloor;
+	Model<VertexMonoColor> MPagoda;
+	Model<VertexMonoColor> MEiffel;
 
 
 	DescriptorSet DSGubo;
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
-	DescriptorSet DSTank, DSCar, DSCarBackLeftTire, DSCarBackRightTire, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSFloor;
+	DescriptorSet DSTank, DSCar, DSCarBackLeftTire, DSCarBackRightTire, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSPagoda, DSEiffel, DSFloor;
 
 
 	Texture TTank, TCar, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TFloor;
@@ -110,7 +116,7 @@ protected:
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackLeftTire, uboBackRightTire, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
-
+	MeshUniformBlock uboPagoda, uboEiffel;
 	MeshUniformBlock uboFloor;
 
 	GlobalUniformBlock gubo;
@@ -202,7 +208,7 @@ protected:
 
 	const float CAR_ACC_SPEED = 8.0f;
 	const float CAR_DEC_SPEED = 7.0f;
-	const float CAR_MAX_SPEED = 8.0f;
+	const float CAR_MAX_SPEED = 15.0f;
 	const float CAR_ROT_SPEED = glm::radians(20.0f);
 	const float CAR_SCALE = 0.775f;
 	float carMoveSpeed = 0.0f; // I don't need a vector because the car cannot move sideways
@@ -211,7 +217,7 @@ protected:
 	const glm::vec3 BACK_RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, 1.15f);
 	const glm::vec3 BACK_LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, 1.15f);
 
-	
+
 
 	const float HELI_ACC_SPEED = 15.0f;
 	const float HELI_DEC_SPEED = 10.0f;
@@ -232,7 +238,7 @@ protected:
 		DEADZONE = 1.0f,
 		LAMBDATRANS = 8.0f,
 		LAMBDAANGLE = 10.0f;
-	
+
 	// queste molto probabilmente andrebbero messe sotto
 	// Angles and variables needed to implement damping - independet player rotation from the camera
 	float camYaw = 0.0f, camPitch = 0.0f, camRoll = 0.0f,  // il roll sarebbe da togliere
@@ -257,14 +263,14 @@ protected:
 		windowHeight = 900;
 		windowTitle = "Enhanced RiSiKo!";
 		windowResizable = GLFW_TRUE;
-		initialBackgroundColor = { 0.80f, 1.0f, 1.0f, 1.0f };
+		initialBackgroundColor = { 0.50f, 1.0f, 1.0f, 1.0f };
 
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 14; // prima era 9
-		texturesInPool = 12;
-		setsInPool = 14; // prima era 9
+		uniformBlocksInPool = 14;
+		texturesInPool = 11;
+		setsInPool = 14;
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -290,6 +296,10 @@ protected:
 			});
 
 		DSLGubo.init(this, {
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
+			});
+
+		DSLVertexMonument.init(this, {
 					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
 			});
 
@@ -330,6 +340,15 @@ protected:
 					   sizeof(glm::vec3), NORMAL}
 			});
 
+		VVertexMonument.init(this, { 
+			{0, sizeof(VertexMonoColor), VK_VERTEX_INPUT_RATE_VERTEX }
+			}, {
+				{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexMonoColor, pos),
+					   sizeof(glm::vec3), POSITION},
+				{0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexMonoColor, norm),
+					   sizeof(glm::vec3), NORMAL}
+			});
+
 		VVertexFloor.init(this, {
 			{0, sizeof(VertexFloor), VK_VERTEX_INPUT_RATE_VERTEX}
 			}, {
@@ -353,6 +372,8 @@ protected:
 		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
 		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLGubo, &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
+		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/PagodaVert.spv", "shaders/Monuments/PagodaFrag.spv", { &DSLGubo, &DSLVertexMonument });
+		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/EiffelVert.spv", "shaders/Monuments/EiffelFrag.spv", { &DSLGubo, &DSLVertexMonument });
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
 
@@ -369,12 +390,14 @@ protected:
 		MHeliBody.init(this, &VMonoColor, "Models/HeliBody.obj", OBJ);
 		MHeliTopBlade.init(this, &VMonoColor, "Models/HeliTopBlade.obj", OBJ);
 		MHeliBackBlade.init(this, &VMonoColor, "Models/HeliBackBlade.obj", OBJ);
+		MPagoda.init(this, &VVertexMonument, "Models/Pagoda.obj", OBJ);
+		MEiffel.init(this, &VVertexMonument, "Models/Eiffel.obj", OBJ);
 		MFloor.vertices =
 			//			 POS			  NORM		UV
-		{	  { {-100.0f, 0.2f, 50.0f} , {0,1,0} , {0,1} } ,
-			  { { 100.0f, 0.2f, 50.0f} , {0,1,0} , {1,1} } ,
-			  { {-100.0f, 0.2f,-50.0f} , {0,1,0} , {0,0} } ,
-			  { { 100.0f, 0.2f,-50.0f} , {0,1,0} , {1,0} } };
+		{	  { {-200.0f, 0.2f, 100.0f} , {0,1,0} , {0,1} } ,
+			  { { 200.0f, 0.2f, 100.0f} , {0,1,0} , {1,1} } ,
+			  { {-200.0f, 0.2f,-100.0f} , {0,1,0} , {0,0} } ,
+			  { { 200.0f, 0.2f,-100.0f} , {0,1,0} , {1,0} } };
 		MFloor.indices =
 		{ 0, 1, 2,
 		  1, 2, 3 };
@@ -388,7 +411,7 @@ protected:
 		THeliFull.init(this, "textures/Red.png");
 		THeliBody.init(this, "textures/Red.png");
 		THeliTopBlade.init(this, "textures/Red.png");
-		
+
 		TFloor.init(this, "textures/RisikoMap.png");
 
 		// Init local variables
@@ -403,6 +426,8 @@ protected:
 		/* Create the new pipeline */
 		PMonoColor.create();
 		PVertexFloor.create();
+		PPagoda.create();
+		PEiffel.create();
 		// Here you define the data set
 
 		/* FinalProject */
@@ -446,6 +471,13 @@ protected:
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
 			});
 
+		DSPagoda.init(this, &DSLVertexMonument, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+			});
+		DSEiffel.init(this, &DSLVertexMonument, {
+					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+			});
+
 		DSFloor.init(this, &DSLVertexFloor, {
 					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
 					{1, TEXTURE, 0, &TFloor}
@@ -464,6 +496,8 @@ protected:
 		/* cleanup the new pipeline */
 		PMonoColor.cleanup();
 		PVertexFloor.cleanup();
+		PPagoda.cleanup();
+		PEiffel.cleanup();
 		// Cleanup datasets
 		/* FinalProject */
 		/* cleanup the dataset for the room */
@@ -477,6 +511,8 @@ protected:
 		DSHeliBody.cleanup();
 		DSHeliTopBlade.cleanup();
 		DSHeliBackBlade.cleanup();
+		DSPagoda.cleanup();
+		DSEiffel.cleanup();
 		DSFloor.cleanup();
 		DSGubo.cleanup();
 	}
@@ -505,6 +541,8 @@ protected:
 		MHeliBody.cleanup();
 		MHeliTopBlade.cleanup();
 		MHeliBackBlade.cleanup();
+		MPagoda.cleanup();
+		MEiffel.cleanup();
 
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
@@ -512,12 +550,15 @@ protected:
 		/* Cleanup the new Descriptor Set Layout */
 		DSLMonoColor.cleanup();
 		DSLVertexFloor.cleanup();
+		DSLVertexMonument.cleanup();
 		DSLGubo.cleanup();
 
 		/* FinalProject */
 		/* Destroy the new pipeline */
 		PMonoColor.destroy();
 		PVertexFloor.destroy();
+		PPagoda.destroy();
+		PEiffel.destroy();
 	}
 
 	// Here it is the creation of the command buffer:
@@ -548,7 +589,7 @@ protected:
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MCar.indices.size()), 1, 0, 0, 0);
 
-			
+
 
 		// binds the mesh
 		MCarSingleTire.bind(commandBuffer);
@@ -562,7 +603,7 @@ protected:
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MCarSingleTire.indices.size()), 1, 0, 0, 0);
-		
+
 		DSCarLeftTire.bind(commandBuffer, PMonoColor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
@@ -602,8 +643,32 @@ protected:
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MHeliBackBlade.indices.size()), 1, 0, 0, 0);
-		
 
+		// binds the pipeline
+		PPagoda.bind(commandBuffer);
+
+		// binds the descriptor set layout (gubo)
+		DSGubo.bind(commandBuffer, PPagoda, 0, currentImage);
+		// binds the mesh
+		MPagoda.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSPagoda.bind(commandBuffer, PPagoda, 1, currentImage);
+		// record the drawing command in the commnad buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MPagoda.indices.size()), 1, 0, 0, 0);
+
+		// binds the pipeline
+		PEiffel.bind(commandBuffer);
+
+		// binds the descriptor set layout (gubo)
+		DSGubo.bind(commandBuffer, PEiffel, 0, currentImage);
+		// binds the mesh
+		MEiffel.bind(commandBuffer);
+		// binds the descriptor set layout
+		DSEiffel.bind(commandBuffer, PEiffel, 1, currentImage);
+		// record the drawing command in the commnad buffer
+		vkCmdDrawIndexed(commandBuffer,
+			static_cast<uint32_t>(MEiffel.indices.size()), 1, 0, 0, 0);
 
 		// binds the pipeline
 		PVertexFloor.bind(commandBuffer);
@@ -629,10 +694,16 @@ protected:
 
 		glm::vec3 camPos;
 		glm::mat4 ViewPrj;
-		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
+		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
+
+		glm::vec3 ROJO = glm::vec3(0.65f, 0.01f, 0.01f);
+		glm::vec3 GRIJO = glm::vec3(0.75f);
 
 		// Function that contains all the logic of the game
-		Logic(Ar, camPos, ViewPrj, WorldPlayer, WorldTank, WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldGlass, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
+		Logic(Ar, camPos, ViewPrj, 
+			WorldPlayer, WorldTank, 
+			WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, 
+			WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
 		// gubo values
 		gubo.DlightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 4.0f));
@@ -647,8 +718,6 @@ protected:
 		// the third parameter is its size
 		// the fourth parameter is the location inside the descriptor set of this uniform block
 
-		glm::vec3 ROJO = glm::vec3(0.65f, 0.01f, 0.01f);
-		//glm::vec3 ROJO = glm::vec3(1,0,0);
 		/* FinalProject */
 		/* fill the uniform block for the room. Identical to the one of the body of the slot machine */
 		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; uboTank.color = ROJO; uboTank.sColor = glm::vec3(1.0f);
@@ -716,10 +785,34 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSHeliBackBlade.map(currentImage, &uboHeliBackBlades, sizeof(uboHeliBackBlades), 0);
 
+		glm::mat4 WorldPagoda = 
+			glm::translate(glm::mat4(1), glm::vec3(160.0f, 0.0f, -40.0f)) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, -glm::radians(30.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
+
+		uboPagoda.amb = 1.0f; uboPagoda.gamma = 180.0f; uboPagoda.color = GRIJO; uboPagoda.sColor = glm::vec3(1.0f);
+		uboPagoda.mvpMat = ViewPrj * WorldPagoda;
+		uboPagoda.mMat = WorldPagoda;
+		uboPagoda.nMat = glm::inverse(glm::transpose(WorldPagoda));
+		DSPagoda.map(currentImage, &uboPagoda, sizeof(uboPagoda), 0);
+
+		glm::mat4 WorldEiffel =
+			glm::translate(glm::mat4(1), glm::vec3(-0.5f, 0.05f, -27.5f)) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
+
+		uboEiffel.amb = 1.0f; uboEiffel.gamma = 180.0f; uboEiffel.color = GRIJO; uboEiffel.sColor = glm::vec3(1.0f);
+		uboEiffel.mvpMat = ViewPrj * WorldEiffel;
+		uboEiffel.mMat = WorldEiffel;
+		uboEiffel.nMat = glm::inverse(glm::transpose(WorldEiffel));
+		DSEiffel.map(currentImage, &uboEiffel, sizeof(uboEiffel), 0);
+
+
+		glm::mat4 WorldFloor = glm::mat4(1);
 		uboFloor.amb = 1.0f; uboFloor.gamma = 180.0f; uboFloor.color = ROJO; uboFloor.sColor = glm::vec3(1.0f);
-		uboFloor.mMat = glm::mat4(1);
-		uboFloor.mvpMat = ViewPrj * uboFloor.mMat;
-		uboFloor.nMat = glm::inverse(glm::transpose(uboFloor.mMat));
+		uboFloor.mMat = WorldFloor;
+		uboFloor.mvpMat = ViewPrj * WorldFloor;
+		uboFloor.nMat = glm::inverse(glm::transpose(WorldFloor));
 		DSFloor.map(currentImage, &uboFloor, sizeof(uboFloor), 0);
 
 	}
@@ -728,11 +821,11 @@ protected:
 
 
 	void Logic(float Ar, glm::vec3& camPos,
-				glm::mat4& ViewPrj, 
-				glm::mat4& WorldPlayer,
-				glm::mat4& WorldTank,
-				glm::mat4& WorldCar, glm::mat4& WorldBackLeftTire, glm::mat4& WorldBackRightTire, glm::mat4& WorldLeftTire, glm::mat4& WorldRightTire, glm::mat4& WorldGlass,
-				glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, glm::mat4& WorldHeliBackBlade) {
+		glm::mat4& ViewPrj,
+		glm::mat4& WorldPlayer,
+		glm::mat4& WorldTank,
+		glm::mat4& WorldCar, glm::mat4& WorldBackLeftTire, glm::mat4& WorldBackRightTire, glm::mat4& WorldLeftTire, glm::mat4& WorldRightTire, 
+		glm::mat4& WorldHeli, glm::mat4& WorldHeliTopBlade, glm::mat4& WorldHeliBackBlade) {
 
 		// Integration with the timers and the controllers
 			// returns:
@@ -767,7 +860,7 @@ protected:
 		// deltaT = 0.01f;
 
 		// LOGIC OF THE APPLICATION
-
+		
 		// computing camera angles (except pitch) when not transitioning
 		if (!transition) {
 
@@ -963,8 +1056,8 @@ protected:
 			temp = m.x * glm::radians(40.0f); // da definire
 			tireAngle = (tireAngle * exp(-LAMBDAANGLE * deltaT)) + temp * (1 - exp(-LAMBDAANGLE * deltaT));
 
-			tireRotation += carMoveSpeed * glm::radians(1.0f); // da definire
-			if (tireRotation > 2 * M_PI) tireRotation -= 2 * M_PI;
+			tireRotation -= carMoveSpeed * glm::radians(0.05f); // todo da definire
+			if (tireRotation < 2 * M_PI) tireRotation += 2 * M_PI;
 
 			break;
 
@@ -1035,7 +1128,8 @@ protected:
 						if (camYaw - heliYaw + glm::radians(90.0f) > glm::radians(180.0f)) {
 							camYaw -= 2 * M_PI;
 							camYawOld -= 2 * M_PI;
-						} else if (camYaw - heliYaw + glm::radians(90.0f) < -glm::radians(180.0f)) {
+						}
+						else if (camYaw - heliYaw + glm::radians(90.0f) < -glm::radians(180.0f)) {
 							camYaw += 2 * M_PI;
 							camYawOld += 2 * M_PI;
 						}
@@ -1111,7 +1205,7 @@ protected:
 			}
 
 			// update the rotation of both blades - the top one spin faster and slower if the player is going up or down
-			if (m.y) tempRotation =  (1 + (m.y / 4.0f)) * HELI_BLADE_SPEED;
+			if (m.y) tempRotation = (1 + (m.y / 4.0f)) * HELI_BLADE_SPEED;
 			else tempRotation = HELI_BLADE_SPEED;
 			heliTopBladeYaw += tempRotation * deltaT;
 			if (heliTopBladeYaw > 2 * M_PI) heliTopBladeYaw -= 2 * M_PI;
@@ -1135,7 +1229,7 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(1.0f));
 		WorldTank = tempWorld;
 
-		
+
 		// Car World Matrix
 		tempWorld =
 			glm::translate(glm::mat4(1), carPosition) *
@@ -1143,10 +1237,10 @@ protected:
 			glm::scale(glm::mat4(1), glm::vec3(CAR_SCALE));
 		WorldCar = tempWorld;
 
-		
+
 		// Front Right Tire World Matrix
 		glm::vec3 rightTirePosition = carPosition + RIGHT_TIRE_OFFSET;
-		
+
 		tempWorld =
 			glm::translate(glm::mat4(1), rightTirePosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
@@ -1171,7 +1265,7 @@ protected:
 
 		WorldRightTire = tempWorld;
 
-		
+
 		// Front Left Tire World Matrix
 		glm::vec3 leftTirePosition = carPosition + LEFT_TIRE_OFFSET;
 		tempWorld =
@@ -1201,28 +1295,27 @@ protected:
 		glm::vec3 backRightTirePosition = carPosition + BACK_RIGHT_TIRE_OFFSET;
 
 		tempWorld =
- 	 		glm::translate(glm::mat4(1), backRightTirePosition) *
-		 	glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
-		 	glm::scale(glm::mat4(1), glm::vec3(0.375f));
+			glm::translate(glm::mat4(1), backRightTirePosition) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, carYaw - glm::radians(45.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.375f));
 
- 		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
- 		TPosOffsetsC = glm::translate(glm::mat4(1), backRightTirePosition);
- 		TPosC = glm::translate(glm::mat4(1), carPosition);
- 		TOffsetsC = glm::translate(glm::mat4(1), BACK_RIGHT_TIRE_OFFSET);
- 		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
- 		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
+		RyC = glm::rotate(glm::mat4(1), carYaw - glm::radians(45.0f), glm::vec3(0, 1, 0));
+		TPosOffsetsC = glm::translate(glm::mat4(1), backRightTirePosition);
+		TPosC = glm::translate(glm::mat4(1), carPosition);
+		TOffsetsC = glm::translate(glm::mat4(1), BACK_RIGHT_TIRE_OFFSET);
+		applyRotation = glm::rotate(glm::mat4(1), tireRotation, glm::vec3(1, 0, 0));
+		applyAngle = glm::rotate(glm::mat4(1), -tireAngle, glm::vec3(0, 1, 0));
 
- 		tempWorld =
- 			TPosC *
- 			RyC *
- 			TOffsetsC *
- 			//applyAngle *
- 			applyRotation *
- 			glm::inverse(RyC) *
- 			glm::inverse(TPosOffsetsC) *
- 			tempWorld;
+		tempWorld =
+			TPosC *
+			RyC *
+			TOffsetsC *
+			applyRotation *
+			glm::inverse(RyC) *
+			glm::inverse(TPosOffsetsC) *
+			tempWorld;
 
- 		WorldBackRightTire = tempWorld;
+		WorldBackRightTire = tempWorld;
 
 		glm::vec3 backLeftTirePosition = carPosition + BACK_LEFT_TIRE_OFFSET;
 
@@ -1242,7 +1335,6 @@ protected:
 			TPosC *
 			RyC *
 			TOffsetsC *
-			//applyAngle *
 			applyRotation *
 			glm::inverse(RyC) *
 			glm::inverse(TPosOffsetsC) *
@@ -1288,7 +1380,7 @@ protected:
 		WorldHeli = tempWorld;
 
 
-		
+
 		// Top Blade World Matrix
 		glm::vec3 topBladePosition = heliPosition + TOP_BLADE_OFFSET;
 		tempWorld =
@@ -1402,7 +1494,7 @@ protected:
 			printf("\n\nSOMETHING'S WRONG I CAN FEEL IT\n");
 			break;
 		}
-		
+
 		// If a transition (i.e. interaction with a vehicle) is going on, damp to the arrival ViewPrj
 		if (transition) {
 			transitionTimer += deltaT;
@@ -1413,7 +1505,7 @@ protected:
 			}
 		}
 		oldViewPrj = ViewPrj;
-		
+
 		// If i'm not driving a vehicle, check for the closest one
 		if (gameState == GameState::WALK) {
 			GameState tempClosest = ClosestObject();
