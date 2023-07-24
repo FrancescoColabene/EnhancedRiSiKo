@@ -57,6 +57,7 @@ struct PointGlobalUniformBlock {
 
 // The uniform buffer object copied from A07
 struct UniformBufferObject {
+	alignas(4) float amb;
 	alignas(16) glm::mat4 mvpMat;
 	alignas(16) glm::mat4 mMat;
 	alignas(16) glm::mat4 nMat;
@@ -107,7 +108,6 @@ protected:
 	DescriptorSetLayout DSLMonoColor;
 	DescriptorSetLayout DSLVertexFloor;
 	DescriptorSetLayout DSLVertexMonument;
-	DescriptorSetLayout DSLVertexColor;
 
 	// Vertex formats
 
@@ -116,7 +116,6 @@ protected:
 	VertexDescriptor VMonoColor;
 	VertexDescriptor VVertexFloor;
 	VertexDescriptor VVertexMonument;
-	VertexDescriptor VVertexColor;
 
 	// Pipelines [Shader couples]
 	/* FinalProject */
@@ -126,7 +125,6 @@ protected:
 	Pipeline PPagoda;
 	Pipeline PEiffel;
 	Pipeline PRushmore;
-	Pipeline PVertexColor;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	// Please note that Model objects depends on the corresponding vertex structure
@@ -148,7 +146,7 @@ protected:
 				DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, 
 				DSPagoda, DSEiffel, DSRushmore, DSFloor;
 
-	Texture TTank, TCar, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TRushmore, TFloor;
+	Texture TRushmore, TFloor;
 
 	// C++ storage for uniform variables
 	/* FinalProject */
@@ -156,7 +154,7 @@ protected:
 	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackLeftTire, uboBackRightTire, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
 	MeshUniformBlock uboPyramid;
 	GGXMeshUniformBlock uboPagoda, uboEiffel, uboRushmore;
-	MeshUniformBlock uboFloor;
+	UniformBufferObject uboFloor;
 
 	DirectGlobalUniformBlock dGubo;				// direct light gubo
 	PointGlobalUniformBlock pGubo[3];			// point light gubo
@@ -349,11 +347,6 @@ protected:
 					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
 			});
 
-		DSLVertexColor.init(this, {
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}
-			});
-
 		// Vertex descriptors
 
 		/* FinalProject */
@@ -411,16 +404,6 @@ protected:
 					   sizeof(glm::vec2), UV}
 			});
 
-		VVertexColor.init(this, {
-			{0, sizeof(VertexColor), VK_VERTEX_INPUT_RATE_VERTEX}
-			}, {
-				{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, pos),
-					   sizeof(glm::vec3), POSITION},
-				{0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, norm),
-					   sizeof(glm::vec3), NORMAL},
-				{0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, color),
-					   sizeof(glm::vec3), COLOR}
-			});
 
 		// Pipelines [Shader couples]
 		// The second parameter is the pointer to the vertex definition
@@ -432,11 +415,11 @@ protected:
 
 		// SET 0: DSLDGubo, SET 1: DSLMonoColor
 		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLDGubo, &DSLMonoColor });
-		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLDGubo, &DSLVertexFloor });
+		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
 		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[0], &DSLVertexMonument});
 		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[1], &DSLVertexMonument});
-		PRushmore.init(this, &VVertexFloor, "shaders/Monuments/GGXTextureVert.spv", "shaders/Monuments/GGXTextureFrag.spv", { &DSLPGubo[2], &DSLVertexColor });
+		PRushmore.init(this, &VVertexFloor, "shaders/Monuments/GGXTextureVert.spv", "shaders/Monuments/GGXTextureFrag.spv", { &DSLPGubo[2], &DSLVertexFloor });
 		//PVertexColor.init(this, &VVertexColor, "shaders/Monuments/", "shaders/Monuments/", { &DSLDGubo, &DSLVertexMonument });
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
@@ -470,14 +453,7 @@ protected:
 
 		// Create the textures
 		// The second parameter is the file name
-		TTank.init(this, "textures/Red.png");
-		TCar.init(this, "textures/Red.png");
-		TCarSingleTire.init(this, "textures/Red.png");
-		THeliFull.init(this, "textures/Red.png");
-		THeliBody.init(this, "textures/Red.png");
-		THeliTopBlade.init(this, "textures/Red.png");
 		TRushmore.init(this, "textures/rushmore.png");
-
 		TFloor.init(this, "textures/RisikoMap.png");
 
 		// Init local variables
@@ -550,7 +526,7 @@ protected:
 			});
 
 		DSFloor.init(this, &DSLVertexFloor, {
-					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr},
+					{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 					{1, TEXTURE, 0, &TFloor}
 			});
 
@@ -608,12 +584,6 @@ protected:
 	// methods: .cleanup() recreates them, while .destroy() delete them completely
 	void localCleanup() {
 		// Cleanup textures
-		TTank.cleanup();
-		TCar.cleanup();
-		TCarSingleTire.cleanup();
-		THeliFull.cleanup();
-		THeliBody.cleanup();
-		THeliTopBlade.cleanup();
 		TFloor.cleanup();
 		TRushmore.cleanup();
 
@@ -630,7 +600,7 @@ protected:
 		MPagoda.cleanup();
 		MEiffel.cleanup();
 		MRushmore.cleanup();
-
+		
 		MFloor.cleanup();
 		// Cleanup descriptor set layouts
 		/* FinalProject */
@@ -780,8 +750,7 @@ protected:
 		// binds the mesh
 		MFloor.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSDGubo.bind(commandBuffer, PVertexFloor, 0, currentImage);
-		DSFloor.bind(commandBuffer, PVertexFloor, 1, currentImage);
+		DSFloor.bind(commandBuffer, PVertexFloor, 0, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
@@ -804,7 +773,7 @@ protected:
 		glm::vec3 ROJO = glm::vec3(0.65f, 0.01f, 0.01f);
 		
 		glm::vec3 eiffelPosition = glm::vec3(-0.5f, 0.05f, -27.5f);
-		glm::vec3 pagodaPosition = glm::vec3(160.0f, 0.0f, -40.0f);
+		glm::vec3 pagodaPosition = glm::vec3(158.0f, 0.0f, -40.0f);
 		glm::vec3 rushmorePosition = glm::vec3(-145.0f, 0.0f, -40.0f);
 
 		// Function that contains all the logic of the game
@@ -831,16 +800,16 @@ protected:
 		// Writes value to the GPU
 		DSPGubo[0].map(currentImage, &pGubo[0], sizeof(pGubo[0]), 0);
 
-		pGubo[1].PlightPos = glm::vec3(pagodaPosition.x - 3.5f, pagodaPosition.y + 2.0f, pagodaPosition.z + 6.0f);
+		pGubo[1].PlightPos = glm::vec3(pagodaPosition.x - 7.0f, pagodaPosition.y + 4.0f, pagodaPosition.z + 12.0f);
 		pGubo[1].PlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		pGubo[1].AmbLightColor = glm::vec3(0.01f);
 		pGubo[1].eyePos = camPos;
-		pGubo[1].beta = 1.0f;
-		pGubo[1].g = 3.0f;
+		pGubo[1].beta = 2.0f;
+		pGubo[1].g = 8.0f;
 		// Writes value to the GPU
 		DSPGubo[1].map(currentImage, &pGubo[1], sizeof(pGubo[1]), 0);
 
-		pGubo[2].PlightPos = glm::vec3(rushmorePosition.x, rushmorePosition.y, rushmorePosition.z + 20.0f);
+		pGubo[2].PlightPos = glm::vec3(rushmorePosition.x + 25.0f, rushmorePosition.y + 15.0f, rushmorePosition.z + 15.0f);
 		pGubo[2].PlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		pGubo[2].AmbLightColor = glm::vec3(0.5f);
 		pGubo[2].eyePos = camPos;
@@ -943,7 +912,7 @@ protected:
 		glm::mat4 WorldPagoda =
 			glm::translate(glm::mat4(1), pagodaPosition) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, -glm::radians(30.0f), 0.0f))) *
-			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
+			glm::scale(glm::mat4(1), glm::vec3(0.7f));;
 
 		uboPagoda.amb = 1.0f; uboPagoda.metallic = 0.1f; uboPagoda.roughness = 0.1f; uboPagoda.fresnel = 0.4f;
 		uboPagoda.color = ORIO2; uboPagoda.sColor = ORIO;
@@ -967,7 +936,7 @@ protected:
 		DSRushmore.map(currentImage, &uboRushmore, sizeof(uboRushmore), 0);
 
 		glm::mat4 WorldFloor = glm::mat4(1);
-		uboFloor.amb = 1.0f; uboFloor.gamma = 180.0f; uboFloor.color = ROJO; uboFloor.sColor = glm::vec3(1.0f);
+		uboFloor.amb = 0.2f;
 		uboFloor.mMat = WorldFloor;
 		uboFloor.mvpMat = ViewPrj * WorldFloor;
 		uboFloor.nMat = glm::inverse(glm::transpose(WorldFloor));
@@ -1716,6 +1685,8 @@ protected:
 					case HELI:
 						gameState = GameState::HELI;
 						oldHeliPos = heliPosition;
+						newHeliPos = heliPosition;
+						heliMoveSpeed.y = 0.0f;
 						break;
 					default:
 						printf("\nC A S I N I   F R A\n");

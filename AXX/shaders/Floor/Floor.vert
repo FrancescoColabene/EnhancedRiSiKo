@@ -5,11 +5,8 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNorm;
 layout(location = 2) in vec2 inUV;
 
-layout(set = 1, binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform UniformBufferObject {
 	float amb;
-	float gamma;
-	vec3 color;
-	vec3 sColor;
 	mat4 mvpMat;
 	mat4 mMat;
 	mat4 nMat;
