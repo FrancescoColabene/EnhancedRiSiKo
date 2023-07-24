@@ -5,7 +5,9 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNorm;
 layout(set = 1, binding = 0) uniform UniformBufferObject {
 	float amb;
-	float gamma;
+	float metallic;
+	float roughness;
+	float fresnel;
 	vec3 color;
 	vec3 sColor;
 	mat4 mvpMat;

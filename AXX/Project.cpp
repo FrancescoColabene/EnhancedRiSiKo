@@ -21,13 +21,33 @@ struct MeshUniformBlock {
 	alignas(16) glm::mat4 nMat;
 };
 
+struct GGXMeshUniformBlock {
+	alignas(4) float amb;
+	alignas(4) float metallic;
+	alignas(4) float roughness;
+	alignas(4) float fresnel;
+	alignas(16) glm::vec3 color;
+	alignas(16) glm::vec3 sColor;
+	alignas(16) glm::mat4 mvpMat;
+	alignas(16) glm::mat4 mMat;
+	alignas(16) glm::mat4 nMat;
+};
+
+
 struct PlainUniformBlock {
 	alignas(4) float visible;
 };
 
-struct GlobalUniformBlock {
+struct DirectGlobalUniformBlock {
 	alignas(16) glm::vec3 DlightDir;
 	alignas(16) glm::vec3 DlightColor;
+	alignas(16) glm::vec3 AmbLightColor;
+	alignas(16) glm::vec3 eyePos;
+};
+
+struct PointGlobalUniformBlock {
+	alignas(16) glm::vec3 PlightPos;
+	alignas(16) glm::vec3 PlightColor;
 	alignas(16) glm::vec3 AmbLightColor;
 	alignas(16) glm::vec3 eyePos;
 };
@@ -61,6 +81,12 @@ struct VertexFloor {
 	glm::vec2 UV;
 };
 
+struct VertexColor {
+	glm::vec3 pos;
+	glm::vec3 norm;
+	glm::vec3 color;
+};
+
 #define M_PI 3.141595f
 
 // MAIN ! 
@@ -71,12 +97,14 @@ protected:
 	float Ar;
 
 	// Descriptor Layouts ["classes" of what will be passed to the shaders]
-	DescriptorSetLayout DSLGubo;
+	DescriptorSetLayout DSLDGubo;		// direct light gubo
+	DescriptorSetLayout DSLPGubo;		// point light gubo
 	/* FinalProject */
 	/* Add the variable that will contain the required Descriptor Set Layout */
 	DescriptorSetLayout DSLMonoColor;
 	DescriptorSetLayout DSLVertexFloor;
 	DescriptorSetLayout DSLVertexMonument;
+	DescriptorSetLayout DSLVertexColor;
 
 	// Vertex formats
 
@@ -85,6 +113,7 @@ protected:
 	VertexDescriptor VMonoColor;
 	VertexDescriptor VVertexFloor;
 	VertexDescriptor VVertexMonument;
+	VertexDescriptor VVertexColor;
 
 	// Pipelines [Shader couples]
 	/* FinalProject */
@@ -93,6 +122,7 @@ protected:
 	Pipeline PVertexFloor;
 	Pipeline PPagoda;
 	Pipeline PEiffel;
+	Pipeline PVertexColor;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	// Please note that Model objects depends on the corresponding vertex structure
@@ -102,13 +132,14 @@ protected:
 	Model<VertexFloor> MFloor;
 	Model<VertexMonoColor> MPagoda;
 	Model<VertexMonoColor> MEiffel;
+	Model<VertexMonoColor> MPyramid;
 
 
-	DescriptorSet DSGubo;
+	DescriptorSet DSDGubo;			// direct light gubo
+	DescriptorSet DSPGubo;			// point light gubo
 	/* FinalProject */
 	/* Add the variable that will contain the Descriptor Set for the room */
-	DescriptorSet DSTank, DSCar, DSCarBackLeftTire, DSCarBackRightTire, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSPagoda, DSEiffel, DSFloor;
-
+	DescriptorSet DSTank, DSCar, DSCarBackLeftTire, DSCarBackRightTire, DSCarLeftTire, DSCarRightTire, DSHeliFull, DSHeliBody, DSHeliTopBlade, DSHeliBackBlade, DSPagoda, DSEiffel, DSFloor, DSPyramid;
 
 	Texture TTank, TCar, TCarSingleTire, THeliFull, THeliBody, THeliTopBlade, TFloor;
 
@@ -116,10 +147,12 @@ protected:
 	/* FinalProject */
 	/* Add the variable that will contain the Uniform Block in slot 0, set 1 of the room */
 	MeshUniformBlock uboTank, uboCar, uboHeliBody, uboHeliTopBlade, uboBackLeftTire, uboBackRightTire, uboLeftTire, uboRightTire, uboHeliFull, uboGlass, uboHeliBackBlades;
-	MeshUniformBlock uboPagoda, uboEiffel;
+	MeshUniformBlock uboPyramid;
+	GGXMeshUniformBlock uboPagoda, uboEiffel;
 	MeshUniformBlock uboFloor;
 
-	GlobalUniformBlock gubo;
+	DirectGlobalUniformBlock dGubo;			// direct light gubo
+	PointGlobalUniformBlock pGubo;			// point light gubo
 
 	// ------------------------------------------------------------------------------------
 
@@ -268,9 +301,9 @@ protected:
 		// Descriptor pool sizes
 		/* FinalProject */
 		/* Update the requirements for the size of the pool */
-		uniformBlocksInPool = 14;
-		texturesInPool = 11;
-		setsInPool = 14;
+		uniformBlocksInPool = 16;
+		texturesInPool = 12;
+		setsInPool = 16;
 
 		Ar = (float)windowWidth / (float)windowHeight;
 	}
@@ -295,7 +328,10 @@ protected:
 					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
 			});
 
-		DSLGubo.init(this, {
+		DSLDGubo.init(this, {
+					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
+			});
+		DSLPGubo.init(this, {
 					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS}
 			});
 
@@ -360,6 +396,17 @@ protected:
 					   sizeof(glm::vec2), UV}
 			});
 
+		VVertexColor.init(this, {
+			{0, sizeof(VertexColor), VK_VERTEX_INPUT_RATE_VERTEX}
+			}, {
+				{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, pos),
+					   sizeof(glm::vec3), POSITION},
+				{0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, norm),
+					   sizeof(glm::vec3), NORMAL},
+				{0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexColor, color),
+					   sizeof(glm::vec3), COLOR}
+			});
+
 		// Pipelines [Shader couples]
 		// The second parameter is the pointer to the vertex definition
 		// Third and fourth parameters are respectively the vertex and fragment shaders
@@ -368,12 +415,13 @@ protected:
 		/* FinalProject */
 		/* Create the new pipeline, using shaders "VColorVert.spv" and "VColorFrag.spv" */
 
-		// SET 0: DSLGubo, SET 1: DSLMonoColor
-		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLGubo, &DSLMonoColor });
-		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLGubo, &DSLVertexFloor });
+		// SET 0: DSLDGubo, SET 1: DSLMonoColor
+		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLDGubo, &DSLMonoColor });
+		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLDGubo, &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
-		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/PagodaVert.spv", "shaders/Monuments/PagodaFrag.spv", { &DSLGubo, &DSLVertexMonument });
-		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/EiffelVert.spv", "shaders/Monuments/EiffelFrag.spv", { &DSLGubo, &DSLVertexMonument });
+		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/PagodaVert.spv", "shaders/Monuments/PagodaFrag.spv", { &DSLDGubo, &DSLVertexMonument });
+		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo, &DSLVertexMonument });
+		//PVertexColor.init(this, &VVertexColor, "shaders/Monuments/", "shaders/Monuments/", { &DSLDGubo, &DSLVertexMonument });
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
 
@@ -472,10 +520,10 @@ protected:
 			});
 
 		DSPagoda.init(this, &DSLVertexMonument, {
-					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+					{0, UNIFORM, sizeof(GGXMeshUniformBlock), nullptr}
 			});
 		DSEiffel.init(this, &DSLVertexMonument, {
-					{0, UNIFORM, sizeof(MeshUniformBlock), nullptr}
+					{0, UNIFORM, sizeof(GGXMeshUniformBlock), nullptr}
 			});
 
 		DSFloor.init(this, &DSLVertexFloor, {
@@ -483,8 +531,11 @@ protected:
 					{1, TEXTURE, 0, &TFloor}
 			});
 
-		DSGubo.init(this, &DSLGubo, {
-					{0, UNIFORM, sizeof(GlobalUniformBlock), nullptr}
+		DSDGubo.init(this, &DSLDGubo, {
+					{0, UNIFORM, sizeof(DirectGlobalUniformBlock), nullptr}
+			});
+		DSPGubo.init(this, &DSLDGubo, {
+					{0, UNIFORM, sizeof(PointGlobalUniformBlock), nullptr}
 			});
 	}
 
@@ -514,7 +565,8 @@ protected:
 		DSPagoda.cleanup();
 		DSEiffel.cleanup();
 		DSFloor.cleanup();
-		DSGubo.cleanup();
+		DSDGubo.cleanup();
+		DSPGubo.cleanup();
 	}
 
 	// Here you destroy all the Models, Texture and Desc. Set Layouts you created!
@@ -551,8 +603,8 @@ protected:
 		DSLMonoColor.cleanup();
 		DSLVertexFloor.cleanup();
 		DSLVertexMonument.cleanup();
-		DSLGubo.cleanup();
-
+		DSLDGubo.cleanup();
+		DSLPGubo.cleanup();
 		/* FinalProject */
 		/* Destroy the new pipeline */
 		PMonoColor.destroy();
@@ -571,8 +623,8 @@ protected:
 
 		// binds the pipeline
 		PMonoColor.bind(commandBuffer);
-		// binds the gubo to the command buffer to our new pipeline and set 0
-		DSGubo.bind(commandBuffer, PMonoColor, 0, currentImage);
+		// binds the dGubo to the command buffer to our new pipeline and set 0
+		DSDGubo.bind(commandBuffer, PMonoColor, 0, currentImage);
 		// binds the mesh
 		MTank.bind(commandBuffer);
 		// binds the descriptor set layout
@@ -647,8 +699,8 @@ protected:
 		// binds the pipeline
 		PPagoda.bind(commandBuffer);
 
-		// binds the descriptor set layout (gubo)
-		DSGubo.bind(commandBuffer, PPagoda, 0, currentImage);
+		// binds the descriptor set layout (dGubo)
+		DSDGubo.bind(commandBuffer, PPagoda, 0, currentImage);
 		// binds the mesh
 		MPagoda.bind(commandBuffer);
 		// binds the descriptor set layout
@@ -660,8 +712,8 @@ protected:
 		// binds the pipeline
 		PEiffel.bind(commandBuffer);
 
-		// binds the descriptor set layout (gubo)
-		DSGubo.bind(commandBuffer, PEiffel, 0, currentImage);
+		// binds the descriptor set layout (dGubo)
+		DSPGubo.bind(commandBuffer, PEiffel, 0, currentImage);
 		// binds the mesh
 		MEiffel.bind(commandBuffer);
 		// binds the descriptor set layout
@@ -675,7 +727,7 @@ protected:
 		// binds the mesh
 		MFloor.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSGubo.bind(commandBuffer, PVertexFloor, 0, currentImage);
+		DSDGubo.bind(commandBuffer, PVertexFloor, 0, currentImage);
 		DSFloor.bind(commandBuffer, PVertexFloor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
@@ -697,7 +749,7 @@ protected:
 		glm::mat4 WorldPlayer, WorldTank, WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade;
 
 		glm::vec3 ROJO = glm::vec3(0.65f, 0.01f, 0.01f);
-		glm::vec3 GRIJO = glm::vec3(0.75f);
+		
 
 		// Function that contains all the logic of the game
 		Logic(Ar, camPos, ViewPrj, 
@@ -705,14 +757,21 @@ protected:
 			WorldCar, WorldBackLeftTire, WorldBackRightTire, WorldLeftTire, WorldRightTire, 
 			WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
-		// gubo values
-		gubo.DlightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 4.0f));
-		gubo.DlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		gubo.AmbLightColor = glm::vec3(0.1f);
-		gubo.eyePos = camPos;
+		// dGubo values
+		dGubo.DlightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 4.0f));
+		dGubo.DlightColor = glm::vec4(0.95f);
+		dGubo.AmbLightColor = glm::vec3(0.1f);
+		dGubo.eyePos = camPos;
+
+		pGubo.PlightPos = glm::vec3(-0.5f, 0.0f, -27.5f);
+		pGubo.PlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		pGubo.AmbLightColor = glm::vec3(0.01f);
+		pGubo.eyePos = camPos;
+
+		DSPGubo.map(currentImage, &pGubo, sizeof(pGubo), 0);
 
 		// Writes value to the GPU
-		DSGubo.map(currentImage, &gubo, sizeof(gubo), 0);
+		DSDGubo.map(currentImage, &dGubo, sizeof(dGubo), 0);
 		// the .map() method of a DataSet object, requires the current image of the swap chain as first parameter
 		// the second parameter is the pointer to the C++ data structure to transfer to the GPU
 		// the third parameter is its size
@@ -785,34 +844,43 @@ protected:
 		/* map the uniform data block to the GPU */
 		DSHeliBackBlade.map(currentImage, &uboHeliBackBlades, sizeof(uboHeliBackBlades), 0);
 
-		glm::mat4 WorldPagoda = 
-			glm::translate(glm::mat4(1), glm::vec3(160.0f, 0.0f, -40.0f)) *
-			glm::mat4(glm::quat(glm::vec3(0.0f, -glm::radians(30.0f), 0.0f))) *
-			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
-
-		uboPagoda.amb = 1.0f; uboPagoda.gamma = 180.0f; uboPagoda.color = GRIJO; uboPagoda.sColor = glm::vec3(1.0f);
-		uboPagoda.mvpMat = ViewPrj * WorldPagoda;
-		uboPagoda.mMat = WorldPagoda;
-		uboPagoda.nMat = glm::inverse(glm::transpose(WorldPagoda));
-		DSPagoda.map(currentImage, &uboPagoda, sizeof(uboPagoda), 0);
+		glm::vec3 GRIJO = glm::vec3(0.75f);
+		glm::vec3 GRIJIO = glm::vec3(0.4f);
+		glm::vec3 ORIO = glm::vec3(0.7f, 0.4f, 0.007f);
+		glm::vec3 ORIO2 = glm::vec3(0.742f, 0.515f, 0.007f);
 
 		glm::mat4 WorldEiffel =
 			glm::translate(glm::mat4(1), glm::vec3(-0.5f, 0.05f, -27.5f)) *
 			glm::mat4(glm::quat(glm::vec3(0.0f, 0.0f, 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
 
-		uboEiffel.amb = 1.0f; uboEiffel.gamma = 180.0f; uboEiffel.color = GRIJO; uboEiffel.sColor = glm::vec3(1.0f);
+		uboEiffel.amb = 1.0f; uboEiffel.metallic = 0.1f; uboEiffel.roughness = 0.33f; uboEiffel.fresnel = 0.3f;
+		uboEiffel.color = GRIJO; uboEiffel.sColor = GRIJIO;
 		uboEiffel.mvpMat = ViewPrj * WorldEiffel;
 		uboEiffel.mMat = WorldEiffel;
 		uboEiffel.nMat = glm::inverse(glm::transpose(WorldEiffel));
+		/* map the uniform data block to the GPU */
 		DSEiffel.map(currentImage, &uboEiffel, sizeof(uboEiffel), 0);
 
+		glm::mat4 WorldPagoda =
+			glm::translate(glm::mat4(1), glm::vec3(160.0f, 0.0f, -40.0f)) *
+			glm::mat4(glm::quat(glm::vec3(0.0f, -glm::radians(30.0f), 0.0f))) *
+			glm::scale(glm::mat4(1), glm::vec3(0.4f));;
+
+		uboPagoda.amb = 1.0f; uboPagoda.metallic = 0.1f; uboPagoda.roughness = 0.1f; uboPagoda.fresnel = 0.3f;
+		uboPagoda.color = ORIO2; uboPagoda.sColor = ORIO;
+		uboPagoda.mvpMat = ViewPrj * WorldPagoda;
+		uboPagoda.mMat = WorldPagoda;
+		uboPagoda.nMat = glm::inverse(glm::transpose(WorldPagoda));
+		/* map the uniform data block to the GPU */
+		DSPagoda.map(currentImage, &uboPagoda, sizeof(uboPagoda), 0);
 
 		glm::mat4 WorldFloor = glm::mat4(1);
 		uboFloor.amb = 1.0f; uboFloor.gamma = 180.0f; uboFloor.color = ROJO; uboFloor.sColor = glm::vec3(1.0f);
 		uboFloor.mMat = WorldFloor;
 		uboFloor.mvpMat = ViewPrj * WorldFloor;
 		uboFloor.nMat = glm::inverse(glm::transpose(WorldFloor));
+		/* map the uniform data block to the GPU */
 		DSFloor.map(currentImage, &uboFloor, sizeof(uboFloor), 0);
 
 	}
