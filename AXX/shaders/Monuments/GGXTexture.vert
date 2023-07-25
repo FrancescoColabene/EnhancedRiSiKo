@@ -9,7 +9,6 @@ layout(location = 2) in vec2 inUV;
 	float metallic;
 	float roughness;
 	float fresnel;
-	vec3 color;
 	vec3 sColor;
 	mat4 mvpMat;
 	mat4 mMat;
