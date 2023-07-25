@@ -177,7 +177,7 @@ protected:
 	// si potrebbe togliere il const e permettere di cambiare fov al player quando si trova in prima persona - magari con un'altra enum
 	const float FOVy = glm::radians(70.0f);
 	const float nearPlane = 0.1f;
-	const float farPlane = 150.0f;
+	const float farPlane = 200.0f;
 
 	// Player starting point + initialization
 	const float PLAYER_HEIGHT = 1.7f;
@@ -186,7 +186,7 @@ protected:
 
 	const glm::vec3 PlayerStartingPos = glm::vec3(0.0f, PLAYER_HEIGHT, 0.0f);
 	const glm::vec3 TankStartingPos = glm::vec3(-7.0f, 0.0f, -12.0f);
-	const glm::vec3 CarStartingPos = glm::vec3(0.0f, 1.05f, -12.0f);
+	const glm::vec3 CarStartingPos = glm::vec3(0.0f, 1.075f, -12.0f);
 	const glm::vec3 HeliStartingPos = glm::vec3(7.0f, HELI_GROUND, -12.0f);
 	glm::vec3
 		playerPosition = PlayerStartingPos,
@@ -250,10 +250,10 @@ protected:
 	const float CAR_ROT_SPEED = glm::radians(20.0f);
 	const float CAR_SCALE = 0.775f;
 	float carMoveSpeed = 0.0f; // I don't need a vector because the car cannot move sideways
-	const glm::vec3 RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, -1.025f);
-	const glm::vec3 LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, -1.025f);
-	const glm::vec3 BACK_RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.425f, 1.15f);
-	const glm::vec3 BACK_LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.425f, 1.15f);
+	const glm::vec3 RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.475f, -1.025f);
+	const glm::vec3 LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.475f, -1.025f);
+	const glm::vec3 BACK_RIGHT_TIRE_OFFSET = glm::vec3(0.8f, -0.475f, 1.15f);
+	const glm::vec3 BACK_LEFT_TIRE_OFFSET = glm::vec3(-0.8f, -0.475f, 1.15f);
 	const float TIRE_ROTATION_SPEED = glm::radians(0.8f);
 
 
@@ -301,7 +301,7 @@ protected:
 		windowHeight = 900;
 		windowTitle = "Enhanced RiSiKo!";
 		windowResizable = GLFW_TRUE;
-		initialBackgroundColor = { 0.0f, 0.005f, 0.025f, 1.0f };
+		initialBackgroundColor = { 0.0f, 0.0025f, 0.0125f, 1.0f };
 
 		// Descriptor pool sizes
 		/* FinalProject */
@@ -756,7 +756,7 @@ protected:
 			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
 
 	}
-
+	
 	// Here is where you update the uniforms.
 	// Very likely this will be where you will be writing the logic of your application.
 	void updateUniformBuffer(uint32_t currentImage) {
@@ -772,7 +772,7 @@ protected:
 
 		glm::vec3 ROJO = glm::vec3(0.65f, 0.01f, 0.01f);
 		
-		glm::vec3 eiffelPosition = glm::vec3(-0.5f, 0.05f, -27.5f);
+		glm::vec3 eiffelPosition = glm::vec3(-0.5f, 0.05f, -57.5f);
 		glm::vec3 pagodaPosition = glm::vec3(158.0f, 0.0f, -40.0f);
 		glm::vec3 rushmorePosition = glm::vec3(-145.0f, 0.0f, -40.0f);
 
@@ -783,8 +783,8 @@ protected:
 			WorldHeli, WorldHeliTopBlade, WorldHeliBackBlade);
 
 		// GUBO VALUES
-		
-		dGubo.DlightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 4.0f));
+		// the lightDir it's to respect to the fragPos 
+		dGubo.DlightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
 		dGubo.DlightColor = glm::vec4(0.4f);
 		dGubo.AmbLightColor = glm::vec3(0.05f);
 		dGubo.eyePos = camPos;
@@ -936,7 +936,7 @@ protected:
 		DSRushmore.map(currentImage, &uboRushmore, sizeof(uboRushmore), 0);
 
 		glm::mat4 WorldFloor = glm::mat4(1);
-		uboFloor.amb = 0.2f;
+		uboFloor.amb = 0.1f;
 		uboFloor.mMat = WorldFloor;
 		uboFloor.mvpMat = ViewPrj * WorldFloor;
 		uboFloor.nMat = glm::inverse(glm::transpose(WorldFloor));
@@ -1049,15 +1049,15 @@ protected:
 				// limiting pitch
 				camPitch = camPitch < playerMinPitch ? playerMinPitch :
 					(camPitch > playerMaxPitch ? playerMaxPitch : camPitch);
-			}
 
-			// make the player fall if it's higher than the ground
-			if (playerPosition.y > PLAYER_HEIGHT) {
-				playerVerticalVelocity += GRAVITY * deltaT;
-				playerPosition.y -= playerVerticalVelocity * deltaT;
-				if (playerPosition.y < PLAYER_HEIGHT) {
-					playerPosition.y = PLAYER_HEIGHT;
-					playerVerticalVelocity = 0.0f;
+				// make the player fall if it's higher than the ground
+				if (playerPosition.y > PLAYER_HEIGHT) {
+					playerVerticalVelocity += GRAVITY * deltaT;
+					playerPosition.y -= playerVerticalVelocity * deltaT;
+					if (playerPosition.y < PLAYER_HEIGHT) {
+						playerPosition.y = PLAYER_HEIGHT;
+						playerVerticalVelocity = 0.0f;
+					}
 				}
 			}
 
