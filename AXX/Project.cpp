@@ -155,6 +155,8 @@ protected:
 
 	// Other application parameters
 	
+	const bool RENDER_RUSHMORE = false;
+
 	// Actual gamestate - signals whether the player is walking or using a vehicle
 	GameState gameState = GameState::WALK;
 	// True if the player is getting into a vehicle or getting off it
@@ -410,7 +412,10 @@ protected:
 		MHeliBackBlade.init(this, &VMonoColor, "Models/HeliBackBlade.obj", OBJ);
 		MPagoda.init(this, &VMonoColor, "Models/Pagoda.obj", OBJ);
 		MEiffel.init(this, &VMonoColor, "Models/Eiffel.obj", OBJ);
-		MRushmore.init(this, &VVertexFloor, "Models/Rushmore.obj", OBJ);
+		if (RENDER_RUSHMORE)
+			MRushmore.init(this, &VVertexFloor, "Models/Rushmore.obj", OBJ);
+		else
+			MRushmore.init(this, &VVertexFloor, "Models/JeepTire.obj", OBJ);
 		// MFloor is created by specifying the position, normals, and UV coordinate of each vertex and how they are connected
 		MFloor.vertices =
 			//			 POS			  NORM		UV
