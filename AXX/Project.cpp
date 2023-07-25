@@ -417,9 +417,9 @@ protected:
 		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLDGubo, &DSLMonoColor });
 		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
-		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[0], &DSLVertexMonument});
-		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[1], &DSLVertexMonument});
-		PRushmore.init(this, &VVertexFloor, "shaders/Monuments/GGXTextureVert.spv", "shaders/Monuments/GGXTextureFrag.spv", { &DSLPGubo[2], &DSLVertexFloor });
+		PEiffel.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[0], &DSLDGubo, &DSLVertexMonument});
+		PPagoda.init(this, &VVertexMonument, "shaders/Monuments/GGXVert.spv", "shaders/Monuments/GGXFrag.spv", { &DSLPGubo[1], &DSLDGubo, &DSLVertexMonument});
+		PRushmore.init(this, &VVertexFloor, "shaders/Monuments/GGXTextureVert.spv", "shaders/Monuments/GGXTextureFrag.spv", { &DSLPGubo[2], &DSLDGubo, &DSLVertexFloor });
 		//PVertexColor.init(this, &VVertexColor, "shaders/Monuments/", "shaders/Monuments/", { &DSLDGubo, &DSLVertexMonument });
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
@@ -708,12 +708,15 @@ protected:
 		// binds the pipeline
 		PEiffel.bind(commandBuffer);
 
-		// binds the descriptor set layout (dGubo)
+
+		// binds the descriptor set layout (pGubo)
 		DSPGubo[0].bind(commandBuffer, PEiffel, 0, currentImage);
+		// binds the descriptor set layout (dGubo)
+		DSDGubo.bind(commandBuffer, PEiffel, 1, currentImage);
 		// binds the mesh
 		MEiffel.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSEiffel.bind(commandBuffer, PEiffel, 1, currentImage);
+		DSEiffel.bind(commandBuffer, PEiffel, 2, currentImage);
 		// record the drawing command in the commnad buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MEiffel.indices.size()), 1, 0, 0, 0);
@@ -721,12 +724,15 @@ protected:
 		// binds the pipeline
 		PPagoda.bind(commandBuffer);
 
-		// binds the descriptor set layout (dGubo)
+
+		// binds the descriptor set layout (pGubo)
 		DSPGubo[1].bind(commandBuffer, PPagoda, 0, currentImage);
+		// binds the descriptor set layout (dGubo)
+		DSDGubo.bind(commandBuffer, PPagoda, 1, currentImage);
 		// binds the mesh
 		MPagoda.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSPagoda.bind(commandBuffer, PPagoda, 1, currentImage);
+		DSPagoda.bind(commandBuffer, PPagoda, 2, currentImage);
 		// record the drawing command in the commnad buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MPagoda.indices.size()), 1, 0, 0, 0);
@@ -734,12 +740,14 @@ protected:
 		// binds the pipeline
 		PRushmore.bind(commandBuffer);
 
-		// binds the descriptor set layout (dGubo)
+		// binds the descriptor set layout (pGubo)
 		DSPGubo[2].bind(commandBuffer, PRushmore, 0, currentImage);
+		// binds the descriptor set layout (dGubo)
+		DSDGubo.bind(commandBuffer, PRushmore, 1, currentImage);
 		// binds the mesh
 		MRushmore.bind(commandBuffer);
 		// binds the descriptor set layout
-		DSRushmore.bind(commandBuffer, PRushmore, 1, currentImage);
+		DSRushmore.bind(commandBuffer, PRushmore, 2, currentImage);
 		// record the drawing command in the commnad buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MRushmore.indices.size()), 1, 0, 0, 0);
