@@ -156,7 +156,7 @@ protected:
 
 	// Other application parameters
 	
-	const bool RENDER_RUSHMORE = false;
+	const bool RENDER_RUSHMORE = true;
 
 	// Actual gamestate - signals whether the player is walking or using a vehicle
 	GameState gameState = GameState::WALK;
@@ -1082,7 +1082,7 @@ protected:
 			// Compute the new position if not transitioning
 			if (!transition) {
 				// If i'm not pressing any button, I should lose velocity till I stop moving
-				if (m.z == 0 && mzCarTank == 0) {
+				if (mzCarTank == 0) {
 					if (carMoveSpeed < 0.0f) {
 						carMoveSpeed += CAR_DEC_SPEED * deltaT;
 						if (carMoveSpeed > 0.0f) carMoveSpeed = 0.0f;
