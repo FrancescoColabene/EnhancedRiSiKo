@@ -1773,7 +1773,6 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 				
 				int x = (bool)state.buttons[GLFW_GAMEPAD_BUTTON_A] ? 1 : (bool)state.buttons[GLFW_GAMEPAD_BUTTON_X] ? -1 : 0;
 				if (x != 0) mzCarTank = x;
-				printf("\nzioperetta: %d\n", mzCarTank);
 			}
 		}
 	}

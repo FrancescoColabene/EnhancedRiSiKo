@@ -216,7 +216,7 @@ protected:
 	const float tankCamDist = 9.0f;
 	// Camera target height and distance for the car view
 	const float carCamHeight = 2.0f;
-	const float carCamDist = 6.0f;
+	const float carCamDist = 7.5f;
 	// Camera target height and distance for the heli view
 	const float heliCamHeight = 3.0f;
 	const float heliCamDist = 12.0f;
@@ -247,14 +247,14 @@ protected:
 	const float TANK_ACC_SPEED = 3.0f;
 	const float TANK_DEC_SPEED = 5.0f;
 	const float TANK_ROT_SPEED = glm::radians(35.0f);
-	const float TANK_MAX_SPEED = 3.0f;
+	const float TANK_MAX_SPEED = 7.0f;
 	// Tank movement speed: it's not a vector because the tank can cannot move sideways
 	float tankMoveSpeed = 0.0f;
 
 	// Car movement constants
 	const float CAR_ACC_SPEED = 8.0f;
 	const float CAR_DEC_SPEED = 7.0f;
-	const float CAR_MAX_SPEED = 15.0f;
+	const float CAR_MAX_SPEED = 10.0f;
 	const float CAR_ROT_SPEED = glm::radians(20.0f);
 	const float CAR_SCALE = 0.775f;
 	// Offsets used to compute the world matrices
@@ -277,11 +277,11 @@ protected:
 
 
 	// Heli movement constants
-	const float HELI_ACC_SPEED = 15.0f;
+	const float HELI_ACC_SPEED = 5.0f;
 	const float HELI_DEC_SPEED = 10.0f;
-	const float HELI_MAX_SPEED = 25.0f;
+	const float HELI_MAX_SPEED = 10.0f;
 	const float HELI_VERT_ACC_SPEED = 5.0f;
-	const float HELI_VERT_MAX_SPEED = 10.0f;
+	const float HELI_VERT_MAX_SPEED = 7.5f;
 	// Deadzone angle for the camera
 	const float HELI_DAMP_ANGLE = glm::radians(10.0f);
 	// Damping speed while returning to center
@@ -766,7 +766,7 @@ protected:
 		
 		// Point light (Rushmore)
 		pGubo[2].PlightPos = RUSHMORE_POSITION + OFFSET_RUSHMORES_LIGHT;
-		pGubo[2].PlightColor = glm::vec4(0.6f, 0.05f, 0.2f, 1.0f);
+		pGubo[2].PlightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		pGubo[2].AmbLightColor = glm::vec3(0.5f);
 		pGubo[2].eyePos = camPos;
 		pGubo[2].beta = 1.0f;
@@ -879,7 +879,7 @@ protected:
 			glm::mat4(glm::quat(glm::vec3(0.0f, glm::radians(110.0f), 0.0f))) *
 			glm::scale(glm::mat4(1), glm::vec3(1.0f));;
 
-		uboRushmore.amb = 1.0f; uboRushmore.metallic = 1.0f; uboRushmore.roughness = 1.0f; uboRushmore.fresnel = 0.1f;
+		uboRushmore.amb = 0.2f; uboRushmore.metallic = 1.0f; uboRushmore.roughness = 1.0f; uboRushmore.fresnel = 0.1f;
 		uboRushmore.sColor = WHITE;
 		uboRushmore.mvpMat = ViewPrj * WorldRushmore;
 		uboRushmore.mMat = WorldRushmore;
@@ -1080,9 +1080,7 @@ protected:
 
 				// Updating car's velocity 
 				carMoveSpeed += float(mzCarTank) * CAR_ACC_SPEED * deltaT;
-				if (mzCarTank) {
-					printf("\nunclepear: %f\n", carMoveSpeed);
-				}
+
 				// Limiting the maximum movement speed 
 				if (abs(carMoveSpeed) > CAR_MAX_SPEED) {
 					carMoveSpeed = CAR_MAX_SPEED * glm::sign(carMoveSpeed);
