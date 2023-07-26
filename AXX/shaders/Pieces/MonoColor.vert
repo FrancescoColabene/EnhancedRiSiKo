@@ -8,6 +8,7 @@ layout(location = 1) in vec3 inNorm;
 	float gamma;
 	vec3 color;
 	vec3 sColor;
+	vec3 rimColor;
 	mat4 mvpMat;
 	mat4 mMat;
 	mat4 nMat;

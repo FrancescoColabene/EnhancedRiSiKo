@@ -11,18 +11,19 @@
 //        mat3  : alignas(16)
 //        mat4  : alignas(16)
 
-// Ubo for the phong reflection model used for vehicles
+// Ubo for the toon shading + blinn BRDF used for vehicles
 struct MeshUniformBlock {
 	alignas(4) float amb;
 	alignas(4) float gamma;
 	alignas(16) glm::vec3 color;
 	alignas(16) glm::vec3 sColor;
+	alignas(16) glm::vec3 rimColor;
 	alignas(16) glm::mat4 mvpMat;
 	alignas(16) glm::mat4 mMat;
 	alignas(16) glm::mat4 nMat;
 };
 
-// Ubo for the GGX BRDF used for the monuments
+// Ubo for the lambert + GGX BRDF used for the monuments
 struct GGXMeshUniformBlock {
 	alignas(4) float amb;
 	alignas(4) float metallic;
@@ -35,7 +36,7 @@ struct GGXMeshUniformBlock {
 	alignas(16) glm::mat4 nMat;
 };
 
-// Ubo for the GGX BRDF used for the monuments (without color)
+// Ubo for the lambert + GGX BRDF used for the monuments (without color)
 struct GGXTextureMeshUniformBlock {
 	alignas(4) float amb;
 	alignas(4) float metallic;
@@ -727,7 +728,12 @@ protected:
 
 		// Base color of the vehicles
 		glm::vec3 RED = glm::vec3(0.65f, 0.01f, 0.01f);
-			
+		glm::vec3 GREEN = glm::vec3(0.01f, 0.5f, 0.01f);
+		glm::vec3 BLUE = glm::vec3(0.01f, 0.01f, 0.5f);
+
+		glm::vec3 RIM_RED = glm::vec3(1.0f, 0.05f, 0.05f);
+		glm::vec3 RIM_GREEN = glm::vec3(0.05f, 1.0f, 0.05f);
+		glm::vec3 RIM_BLUE = glm::vec3(0.05f, 0.05f, 1.0f);
 
 		// Function that contains all the logic of the game
 		Logic(Ar, camPos, ViewPrj, 
@@ -777,7 +783,8 @@ protected:
 		
 		// UBOs
 
-		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; uboTank.color = RED; uboTank.sColor = glm::vec3(1.0f);
+		uboTank.amb = 1.0f; uboTank.gamma = 180.0f; 
+		uboTank.color = RED; uboTank.sColor = glm::vec3(1.0f); uboTank.rimColor = RIM_RED;
 		uboTank.mvpMat = ViewPrj * WorldTank;
 		uboTank.mMat = WorldTank;
 		uboTank.nMat = glm::inverse(glm::transpose(WorldTank));
@@ -785,35 +792,40 @@ protected:
 		DSTank.map(currentImage, &uboTank, sizeof(uboTank), 0);
 
 
-		uboCar.amb = 1.0f; uboCar.gamma = 180.0f; uboCar.color = RED; uboCar.sColor = glm::vec3(1.0f);
+		uboCar.amb = 1.0f; uboCar.gamma = 180.0f; 
+		uboCar.color = BLUE; uboCar.sColor = glm::vec3(1.0f); uboCar.rimColor = RIM_BLUE;
 		uboCar.mvpMat = ViewPrj * WorldCar;
 		uboCar.mMat = WorldCar;
 		uboCar.nMat = glm::inverse(glm::transpose(WorldCar));
 		/* map the uniform data block to the GPU */
 		DSCar.map(currentImage, &uboCar, sizeof(uboCar), 0);
 
-		uboBackLeftTire.amb = 1.0f; uboBackLeftTire.gamma = 180.0f; uboBackLeftTire.color = RED; uboBackLeftTire.sColor = glm::vec3(1.0f);
+		uboBackLeftTire.amb = 1.0f; uboBackLeftTire.gamma = 180.0f; 
+		uboBackLeftTire.color = BLUE; uboBackLeftTire.sColor = glm::vec3(1.0f); uboBackLeftTire.rimColor = RIM_BLUE;
 		uboBackLeftTire.mvpMat = ViewPrj * WorldBackLeftTire;
 		uboBackLeftTire.mMat = WorldBackLeftTire;
 		uboBackLeftTire.nMat = glm::inverse(glm::transpose(WorldBackLeftTire));
 		/* map the uniform data block to the GPU */
 		DSCarBackLeftTire.map(currentImage, &uboBackLeftTire, sizeof(uboBackLeftTire), 0);
 
-		uboBackRightTire.amb = 1.0f; uboBackRightTire.gamma = 180.0f; uboBackRightTire.color = RED; uboBackRightTire.sColor = glm::vec3(1.0f);
+		uboBackRightTire.amb = 1.0f; uboBackRightTire.gamma = 180.0f; 
+		uboBackRightTire.color = BLUE; uboBackRightTire.sColor = glm::vec3(1.0f); uboBackRightTire.rimColor = RIM_BLUE;
 		uboBackRightTire.mvpMat = ViewPrj * WorldBackRightTire;
 		uboBackRightTire.mMat = WorldBackRightTire;
 		uboBackRightTire.nMat = glm::inverse(glm::transpose(WorldBackRightTire));
 		/* map the uniform data block to the GPU */
 		DSCarBackRightTire.map(currentImage, &uboBackRightTire, sizeof(uboBackRightTire), 0);
 
-		uboLeftTire.amb = 1.0f; uboLeftTire.gamma = 180.0f; uboLeftTire.color = RED; uboLeftTire.sColor = glm::vec3(1.0f);
+		uboLeftTire.amb = 1.0f; uboLeftTire.gamma = 180.0f; 
+		uboLeftTire.color = BLUE; uboLeftTire.sColor = glm::vec3(1.0f); uboLeftTire.rimColor = RIM_BLUE;
 		uboLeftTire.mvpMat = ViewPrj * WorldLeftTire;
 		uboLeftTire.mMat = WorldLeftTire;
 		uboLeftTire.nMat = glm::inverse(glm::transpose(WorldLeftTire));
 		/* map the uniform data block to the GPU */
 		DSCarLeftTire.map(currentImage, &uboLeftTire, sizeof(uboLeftTire), 0);
 
-		uboRightTire.amb = 1.0f; uboRightTire.gamma = 180.0f; uboRightTire.color = RED; uboRightTire.sColor = glm::vec3(1.0f);
+		uboRightTire.amb = 1.0f; uboRightTire.gamma = 180.0f; 
+		uboRightTire.color = BLUE; uboRightTire.sColor = glm::vec3(1.0f); uboRightTire.rimColor = RIM_BLUE;
 		uboRightTire.mvpMat = ViewPrj * WorldRightTire;
 		uboRightTire.mMat = WorldRightTire;
 		uboRightTire.nMat = glm::inverse(glm::transpose(WorldRightTire));
@@ -821,21 +833,24 @@ protected:
 		DSCarRightTire.map(currentImage, &uboRightTire, sizeof(uboRightTire), 0);
 
 
-		uboHeliBody.amb = 1.0f; uboHeliBody.gamma = 180.0f; uboHeliBody.color = RED; uboHeliBody.sColor = glm::vec3(1.0f);
+		uboHeliBody.amb = 1.0f; uboHeliBody.gamma = 180.0f; 
+		uboHeliBody.color = GREEN; uboHeliBody.sColor = glm::vec3(1.0f); uboHeliBody.rimColor = RIM_GREEN;
 		uboHeliBody.mvpMat = ViewPrj * WorldHeli;
 		uboHeliBody.mMat = WorldHeli;
 		uboHeliBody.nMat = glm::inverse(glm::transpose(WorldHeli));
 		/* map the uniform data block to the GPU */
 		DSHeliBody.map(currentImage, &uboHeliBody, sizeof(uboHeliBody), 0);
 
-		uboHeliTopBlade.amb = 1.0f; uboHeliTopBlade.gamma = 180.0f; uboHeliTopBlade.color = RED; uboHeliTopBlade.sColor = glm::vec3(1.0f);
+		uboHeliTopBlade.amb = 1.0f; uboHeliTopBlade.gamma = 180.0f; 
+		uboHeliTopBlade.color = GREEN; uboHeliTopBlade.sColor = glm::vec3(1.0f); uboHeliTopBlade.rimColor = RIM_GREEN;
 		uboHeliTopBlade.mvpMat = ViewPrj * WorldHeliTopBlade;
 		uboHeliTopBlade.mMat = WorldHeliTopBlade;
 		uboHeliTopBlade.nMat = glm::inverse(glm::transpose(WorldHeliTopBlade));
 		/* map the uniform data block to the GPU */
 		DSHeliTopBlade.map(currentImage, &uboHeliTopBlade, sizeof(uboHeliTopBlade), 0);
 
-		uboHeliBackBlades.amb = 1.0f; uboHeliBackBlades.gamma = 180.0f; uboHeliBackBlades.color = RED; uboHeliBackBlades.sColor = glm::vec3(1.0f);
+		uboHeliBackBlades.amb = 1.0f; uboHeliBackBlades.gamma = 180.0f; 
+		uboHeliBackBlades.color = GREEN; uboHeliBackBlades.sColor = glm::vec3(1.0f); uboHeliBackBlades.rimColor = RIM_GREEN;
 		uboHeliBackBlades.mvpMat = ViewPrj * WorldHeliBackBlade;
 		uboHeliBackBlades.mMat = WorldHeliBackBlade;
 		uboHeliBackBlades.nMat = glm::inverse(glm::transpose(WorldHeliBackBlade));
@@ -1596,9 +1611,6 @@ protected:
 				{
 					// without updating the oldPos, the view-prj too late with the damping 
 					// if the object moves after the player left it
-				case WALK:
-					printf("\nCASINI FRA\n");
-					break;
 				case TANK:
 					gameState = GameState::TANK;
 					oldTankPos = tankPosition;

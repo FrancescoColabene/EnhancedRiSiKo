@@ -1800,7 +1800,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		double m_dy = ypos - old_ypos;
 		old_xpos = xpos; old_ypos = ypos;
 
-		const float MOUSE_RES = 2.0f;
+		const float MOUSE_RES = 10.0f;
 		// Setting sticky to true permits to register inputs even if they are pressed and released in a timespan that is shorter than a frame
 		glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 		
