@@ -909,9 +909,10 @@ protected:
 		// Variables needed to manage user's input
 		float deltaT;
 		glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
+		int mzCarTank = 0;
 		bool action = false;
 		// getSixAxis populates those variables 
-		getSixAxis(deltaT, m, r, action);
+		getSixAxis(deltaT, m, r, mzCarTank, action);
 
 		// placeholder variables for matrices
 		glm::mat4 ViewMatrix, ProjectionMatrix, tempWorld;
@@ -1004,7 +1005,7 @@ protected:
 			// Compute the new position if not transitioning
 			if (!transition) {
 				// If i'm not pressing any button, I should lose velocity till I stop moving
-				if (m.z == 0) {
+				if (mzCarTank == 0) {
 					if (tankMoveSpeed < 0.0f) {
 						tankMoveSpeed += TANK_DEC_SPEED * deltaT;
 						if (tankMoveSpeed > 0.0f) tankMoveSpeed = 0.0f;
@@ -1016,7 +1017,7 @@ protected:
 				}
 
 				// Updating tank's velocity 
-				tankMoveSpeed += m.z * TANK_ACC_SPEED * deltaT;
+				tankMoveSpeed += mzCarTank * TANK_ACC_SPEED * deltaT;
 
 				// Limiting the maximum movement speed 
 				if (abs(tankMoveSpeed) > TANK_MAX_SPEED) {
@@ -1066,7 +1067,7 @@ protected:
 			// Compute the new position if not transitioning
 			if (!transition) {
 				// If i'm not pressing any button, I should lose velocity till I stop moving
-				if (m.z == 0) {
+				if (m.z == 0 && mzCarTank == 0) {
 					if (carMoveSpeed < 0.0f) {
 						carMoveSpeed += CAR_DEC_SPEED * deltaT;
 						if (carMoveSpeed > 0.0f) carMoveSpeed = 0.0f;
@@ -1078,8 +1079,10 @@ protected:
 				}
 
 				// Updating car's velocity 
-				carMoveSpeed += m.z * CAR_ACC_SPEED * deltaT;
-
+				carMoveSpeed += float(mzCarTank) * CAR_ACC_SPEED * deltaT;
+				if (mzCarTank) {
+					printf("\nunclepear: %f\n", carMoveSpeed);
+				}
 				// Limiting the maximum movement speed 
 				if (abs(carMoveSpeed) > CAR_MAX_SPEED) {
 					carMoveSpeed = CAR_MAX_SPEED * glm::sign(carMoveSpeed);

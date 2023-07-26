@@ -1742,7 +1742,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 	
 	
 	// Control Wrapper
-	void handleGamePad(int id,  glm::vec3 &m, glm::vec3 &r, bool &fire) {
+	void handleGamePad(int id,  glm::vec3 &m, glm::vec3 &r ,int& mzCarTank, bool &fire) {
 		const float deadZone = 0.1f;
 		
 		if(glfwJoystickIsGamepad(id)) {
@@ -1769,7 +1769,11 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 				}
 				r.z += state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] ? 1.0f : 0.0f;
 				r.z -= state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] ? 1.0f : 0.0f;
-				fire = fire | (bool)state.buttons[GLFW_GAMEPAD_BUTTON_A] | (bool)state.buttons[GLFW_GAMEPAD_BUTTON_B];
+				fire = fire || (bool)state.buttons[GLFW_GAMEPAD_BUTTON_Y];
+				
+				int x = (bool)state.buttons[GLFW_GAMEPAD_BUTTON_A] ? 1 : (bool)state.buttons[GLFW_GAMEPAD_BUTTON_X] ? -1 : 0;
+				if (x != 0) mzCarTank = x;
+				printf("\nzioperetta: %d\n", mzCarTank);
 			}
 		}
 	}
@@ -1780,7 +1784,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 	public:
 
 	// Get the information to compute the next frame
-	void getSixAxis(float& deltaT, glm::vec3& m, glm::vec3& r, bool& fire) {
+	void getSixAxis(float& deltaT, glm::vec3& m, glm::vec3& r, int& mzCarTank, bool& fire) {
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		static float lastTime = 0.0f;
 
@@ -1823,6 +1827,7 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 			released = true;
 		
 
+		mzCarTank = 0;
 
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 			r.y = -1.0f;
@@ -1851,9 +1856,11 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		}
 		if (glfwGetKey(window, GLFW_KEY_S)) {
 			m.z = -1.0f;
+			mzCarTank = -1;
 		}
 		if (glfwGetKey(window, GLFW_KEY_W)) {
 			m.z = 1.0f;
+			mzCarTank = 1;
 		}
 		if (glfwGetKey(window, GLFW_KEY_R)) {
 			m.y = 1.0f;
@@ -1863,10 +1870,10 @@ std::cout << "Starting createInstance()\n"  << std::flush;
 		}
 
 		fire = (glfwGetKey(window, GLFW_KEY_E) | glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) == GLFW_PRESS;
-		handleGamePad(GLFW_JOYSTICK_1, m, r, fire);
-		handleGamePad(GLFW_JOYSTICK_2, m, r, fire);
-		handleGamePad(GLFW_JOYSTICK_3, m, r, fire);
-		handleGamePad(GLFW_JOYSTICK_4, m, r, fire);
+		handleGamePad(GLFW_JOYSTICK_1, m, r, mzCarTank, fire);
+		handleGamePad(GLFW_JOYSTICK_2, m, r, mzCarTank, fire);
+		handleGamePad(GLFW_JOYSTICK_3, m, r, mzCarTank, fire);
+		handleGamePad(GLFW_JOYSTICK_4, m, r, mzCarTank, fire);
 	}
 
 
