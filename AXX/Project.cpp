@@ -156,7 +156,7 @@ protected:
 
 	// Other application parameters
 	
-	const bool RENDER_RUSHMORE = true;
+	const bool RENDER_RUSHMORE = false;
 
 	// Actual gamestate - signals whether the player is walking or using a vehicle
 	GameState gameState = GameState::WALK;
@@ -394,7 +394,7 @@ protected:
 		// Example: set = 0 -> DSLDGubo, set = 1 -> DSLMonoColor
 		PMonoColor.init(this, &VMonoColor, "shaders/Pieces/MonoColorVert.spv", "shaders/Pieces/MonoColorFrag.spv", { &DSLDGubo, &DSLMonoColor });
 		
-		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLVertexFloor });
+		PVertexFloor.init(this, &VVertexFloor, "shaders/Floor/FloorVert.spv", "shaders/Floor/FloorFrag.spv", { &DSLDGubo, &DSLVertexFloor });
 		// Needed to always render the floor, regardless of backface culling
 		PVertexFloor.setAdvancedFeatures(VK_COMPARE_OP_LESS_OR_EQUAL, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false);
 		
@@ -707,8 +707,10 @@ protected:
 		PVertexFloor.bind(commandBuffer);
 		// binds the mesh
 		MFloor.bind(commandBuffer);
+		// binds the descriptor set layout (dGubo)
+		DSDGubo.bind(commandBuffer, PVertexFloor, 0, currentImage);
 		// binds the descriptor set layout
-		DSFloor.bind(commandBuffer, PVertexFloor, 0, currentImage);
+		DSFloor.bind(commandBuffer, PVertexFloor, 1, currentImage);
 		// record the drawing command in the command buffer
 		vkCmdDrawIndexed(commandBuffer,
 			static_cast<uint32_t>(MFloor.indices.size()), 1, 0, 0, 0);
