@@ -51,28 +51,27 @@ Implemented features:
   its own set of shaders (except the vertex shader, which is almost identical), and uses different 
   techniques to model the light equation (diffuse and specular):
     - vehicles use Toon Shading (following and adapting this tutorial 
-  https://roystan.net/articles/toon-shader/) and Blinn reflection;
-  - monuments uses Cook-Torrance and Phong (different pipelines are used because every monument
-    uses its own light. Also the Mount Rushmore uses a slightly different shader to get the
-    color from the texture instead of taking it from a parameter from the uniform buffer);
-  - floor use a basic shader that just show the texture.
+      https://roystan.net/articles/toon-shader/) and Blinn reflection;
+    - monuments uses Cook-Torrance and Phong (different pipelines are used because every monument
+      uses its own light. Also the Mount Rushmore uses a slightly different shader to get the
+      color from the texture instead of taking it from a parameter from the uniform buffer);
+    - floor use a basic shader that just show the texture.
   
 - Models are loaded only once and used multiple times where needed (in particular the tires). 
   
 - 4 ways to move around the map: walking, with a car, with a tank or with a helicopter.
   You can interact and ride a vehicle by moving near it and pressing E; after a brief visual
   transition, you can use it. Each vehicle has its own way to move: 
-    - The tank can rotate while standing still and has the lowest velocity and acceleration of all vehicles.
-    - The car can only turn while moving, and its tires move to the left and right based on 
+    - the tank can rotate while standing still and has the lowest velocity and acceleration of all vehicles.
+    - the car can only turn while moving, and its tires move to the left and right based on 
       the input of the player; the tires also rotate forward or backwards based on the car's velocity.
-    - The helicopter cannot move if it doesn't reach a certain height, it will follow the camera's rotation
+    - the helicopter cannot move if it doesn't reach a certain height, it will follow the camera's rotation
       to stay aligned (with a certain deadzone angle and with a certain damping speed), it won't go under
       a certain height if moving and you can get off it even in the air: the gravity will make it go back 
       to the terrain height (player included). It has moving propellers that rotate and change speed based on
       the inputs and follow the helicopter's inclinations.
-
-  - Both the car's tires and the helicopter's propellers uses a series of transformations to make them rotate
-    and move in certain direction based on the vehicles parameters.
+    - both the car's tires and the helicopter's propellers uses a series of transformations to make them rotate
+      and move in certain direction based on the vehicles parameters.
 
 ## 📊 Results
 The project was presented to the professor and, together with the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments), obtained a final evaluation of 30.
