@@ -1,13 +1,13 @@
-# Enhanched RiSiKo!
+# Enhanced RiSiKo!
 
 This project is an implementation of a geographic map that contains 3 monuments (the Tour Eiffel,
-a Japanese Pagoda and the Mount Rushmore) and 3 vehicles to move inside it: a tank, a car and a helicopter. This project was developed as the final part of the exam of **Computer Graphics** course at Polytechnic University of Milan (Academic Year 2022/2023).
+a Japanese Pagoda and the Mount Rushmore) and 3 vehicles to explore it: a tank, a car and a helicopter. This project was developed as the final part of the exam of **Computer Graphics** course at Polytechnic University of Milan (Academic Year 2022/2023).
 
 ## 📌 Features
 
 - Both first-person and third-person view and movement;
 - Real-time lighting with different shaders;
-- Logic to move get on and off different vehicles with different controls;
+- Logic to get on and off different vehicles, each with different controls;
 - Moving parts in models (helix, tires);
 - Resizable window;
 - Controller integration;
@@ -25,8 +25,8 @@ An extensive list with more details can be found after the screenshot part.
 
 ## 🎮 Controls:
 WASD to move the player, Arrow Keys or Mouse to move the camera, E or Mouse Right Click to interact 
-with vehicles, R and F to go up and down while using the helicopter. Using the Mouse Left Click
-will make the cursor appear and disable the movement of the camera, to adjust the window position/scale.
+with vehicles, R and F to go up and down while using the helicopter. Clicking the left mouse button will make the cursor appear 
+and disable the movement of the camera, to adjust the window position/scale.
 
 ## 📷 Screenshots:
 
@@ -44,13 +44,13 @@ Implemented features:
 - 7 models: 3 handcrafted ones (the vehicles, which do have the smooth shading to obtain
   better-looking figures with their shader), 3 taken from the internet (the monuments; the Mount 
   Rushmore needed some tweaks, its number of vertices has been drastically reduced to avoid low
-  frame rates, and it's the only monument that uses a texture), one created at runtime by 
-  specifyng its vertices position, normals and UV coordinates.
+  frame rates, and it's the only monument that uses a texture), one created at runtime by specifying
+  its vertex positions, normals and UV coordinates.
 
 - 5 pipelines: one for the vehicles, one for each monument and one for the floor. Each pipeline has 
-  it's own set of shaders (except the vertex shader, which is almost identical), and uses different 
+  its own set of shaders (except the vertex shader, which is almost identical), and uses different 
   techniques to model the light equation (diffuse and specular):
-    - vehicles uses Toon Shading (following and adapting this tutorial 
+    - vehicles use Toon Shading (following and adapting this tutorial 
   https://roystan.net/articles/toon-shader/) and Blinn reflection;
   - monuments uses Cook-Torrance and Phong (different pipelines are used because every monument
     uses its own light. Also the Mount Rushmore uses a slightly different shader to get the
@@ -61,18 +61,18 @@ Implemented features:
   
 - 4 ways to move around the map: walking, with a car, with a tank or with a helicopter.
   You can interact and ride a vehicle by moving near it and pressing E; after a brief visual
-  transition, you can use it. Each vehicles has it's own way to move: 
+  transition, you can use it. Each vehicle has its own way to move: 
     - The tank can rotate while standing still and has the lowest velocity and acceleration of all vehicles.
-    - The car can rotate only when it's moving, and its tires move to the left and right based on 
+    - The car can only turn while moving, and its tires move to the left and right based on 
       the input of the player; the tires also rotate forward or backwards based on the car's velocity.
     - The helicopter cannot move if it doesn't reach a certain height, it will follow the camera's rotation
-      to remain straight (with a certain deadzone angle and with a certain damping speed), it won't go under
+      to stay aligned (with a certain deadzone angle and with a certain damping speed), it won't go under
       a certain height if moving and you can get off it even in the air: the gravity will make it go back 
       to the terrain height (player included). It has moving propellers that rotate and change speed based on
       the inputs and follow the helicopter's inclinations.
 
-  - Both the car's tires and the helicopter's propellers uses a series of transformation to
-    make them rotate and move in certain direction based on the vehicles parameters.
+  - Both the car's tires and the helicopter's propellers uses a series of transformations to make them rotate
+    and move in certain direction based on the vehicles parameters.
 
 ## 📊 Results
 The project was presented to the professor and obtained a final evaluation of 30, which includes the grades for the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments) of the course. 
