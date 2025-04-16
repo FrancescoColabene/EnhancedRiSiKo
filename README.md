@@ -3,7 +3,7 @@
 This project is an implementation of a geographic map that contains 3 monuments (the Tour Eiffel,
 a Japanese Pagoda and the Mount Rushmore) and 3 vehicles to move inside it: a tank, a car and a helicopter. This project was developed as the final part of the exam of **Computer Graphics** course at Polytechnic University of Milan (Academic Year 2022/2023).
 
-## Features
+## 📌 Features
 
 - Both first-person and third-person view and movement;
 - Real-time lighting with different shaders;
@@ -14,7 +14,7 @@ a Japanese Pagoda and the Mount Rushmore) and 3 vehicles to move inside it: a ta
 
 An extensive list with more details can be found after the screenshot part.
 
-## Technologies
+## 🛠 Technologies
 
 - Visual Studio (IDE)
 - A Vulkan-capable GPU (graphics card)
@@ -23,19 +23,21 @@ An extensive list with more details can be found after the screenshot part.
 - GLM (a C++ mathematics library for graphics software)
 
 
-## Controls:
+## 🎮 Controls:
 WASD to move the player, Arrow Keys or Mouse to move the camera, E or Mouse Right Click to interact 
 with vehicles, R and F to go up and down while using the helicopter. Using the Mouse Left Click
 will make the cursor appear and disable the movement of the camera, to adjust the window position/scale.
 
-## Screenshots:
+## 📷 Screenshots:
 
-...
+![Vehicles](Images/Vehicles.png)
 
+![Tour Eiffel](Images/Eiffel.png)
 
-Shadows are not implemented: they are part of the texture.
+![Mt Rushmore](Images/Rushmore.png)
+Shadows are not implemented: they are part of the Mt Rushmore texture.
 
-## Extensive list of features
+## 📋 Extensive list of features
 
 Implemented features:
 
@@ -53,7 +55,7 @@ Implemented features:
   - monuments uses Cook-Torrance and Phong (different pipelines are used because every monument
     uses its own light. Also the Mount Rushmore uses a slightly different shader to get the
     color from the texture instead of taking it from a parameter from the uniform buffer);
-  - floor use a basic shader that just show the texture, without any lighting.
+  - floor use a basic shader that just show the texture.
   
 - Models are loaded only once and used multiple times where needed (in particular the tires). 
   
@@ -72,16 +74,16 @@ Implemented features:
   - Both the car's tires and the helicopter's propellers uses a series of transformation to
     make them rotate and move in certain direction based on the vehicles parameters.
 
-## Results
-The project was presented to the professor and obtained a final evaluation of 30, including the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments) of the course. 
+## 📊 Results
+The project was presented to the professor and obtained a final evaluation of 30, which includes the grades for the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments) of the course. 
 
-## Credits
+## ©️ Credits
 
-The monument models were taken online under the [CC Attribution License](https://creativecommons.org/licenses/by/4.0/deed.en). 
+The monument models were taken online under the [CC Attribution License](https://creativecommons.org/licenses/by/4.0/deed.en). Credits can be found [here](AXX/models/CREDITS.md).
 
 A special thanks goes to [Samuel](https://github.com/samuelgiunca) for the vehicles models and other adjustments to monument models. 
 
 
 
-## Authors
+## 👤 Authors
 The project was developed by [Francesco Colabene](https://github.com/FrancescoColabene) and [Stefano Carraro](https://github.com/StefanoCarraro7) for the **Computer Graphics** course, Polytechnic University of Milan, A.Y. 2022/2023
