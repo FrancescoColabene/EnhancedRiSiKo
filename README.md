@@ -75,7 +75,7 @@ Implemented features:
     and move in certain direction based on the vehicles parameters.
 
 ## 📊 Results
-The project was presented to the professor and obtained a final evaluation of 30, which includes the grades for the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments) of the course. 
+The project was presented to the professor and, together with the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments), obtained a final evaluation of 30.
 
 ## ©️ Credits
 
