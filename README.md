@@ -1,4 +1,4 @@
-# Fake RiSiKo!
+# Enhanched RiSiKo!
 
 This project is an implementation of a geographic map that contains 3 monuments (the Tour Eiffel,
 a Japanese Pagoda and the Mount Rushmore) and 3 vehicles to move inside it: a tank, a car and a helicopter. This project was developed as the final part of the exam of **Computer Graphics** course at Polytechnic University of Milan (Academic Year 2022/2023).
