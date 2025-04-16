@@ -76,9 +76,12 @@ Implemented features:
 The project was presented to the professor and obtained a final evaluation of 30, including the [assignments](https://github.com/FrancescoColabene/ComputerGraphics-Assignments) of the course. 
 
 ## Credits
+
+The monument models were taken online under the [CC Attribution License](https://creativecommons.org/licenses/by/4.0/deed.en). 
+
 A special thanks goes to [Samuel](https://github.com/samuelgiunca) for the vehicles models and other adjustments to monument models. 
 
-The models were taken online under the [CC Attribution License](https://creativecommons.org/licenses/by/4.0/deed.en). 
+
 
 ## Authors
 The project was developed by [Francesco Colabene](https://github.com/FrancescoColabene) and [Stefano Carraro](https://github.com/StefanoCarraro7) for the **Computer Graphics** course, Polytechnic University of Milan, A.Y. 2022/2023
