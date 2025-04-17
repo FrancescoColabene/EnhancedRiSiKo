@@ -3,7 +3,7 @@ Mt Rushmore
 Author: https://sketchfab.com/matousekfoto \
 Source: https://sketchfab.com/3d-models/mt-rushmore-b5b2186ba4a44cc9a5351a9fd8b28569  \
 License: CC Attribution (https://creativecommons.org/licenses/by/4.0/deed.en) \
-Modifications: Modified with Blender to reduce the number of vertices and its total weight
+Modifications: Modified with Blender
 
 ---
 
